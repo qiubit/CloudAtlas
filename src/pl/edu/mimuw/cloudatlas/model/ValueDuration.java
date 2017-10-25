@@ -24,12 +24,17 @@
 
 package pl.edu.mimuw.cloudatlas.model;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 
 /**
  * A class representing duration in milliseconds. The duration can be negative. This is a simple wrapper of a Java
  * <code>Long</code> object.
  */
 public class ValueDuration extends ValueSimple<Long> {
+    private static final Pattern durationStringPattern =
+            Pattern.compile("([+-])(\\d) (\\d\\d):(\\d\\d):(\\d\\d)\\.(\\d\\d\\d)");
     /**
      * Constructs a new <code>ValueDuration</code> object wrapping the specified <code>value</code>.
      *
@@ -46,7 +51,7 @@ public class ValueDuration extends ValueSimple<Long> {
 
     @Override
     public Value getDefaultValue() {
-        return new ValueDuration(0L);
+        return new ValueDuration(0l);
     }
 
     /**
@@ -117,9 +122,26 @@ public class ValueDuration extends ValueSimple<Long> {
     }
 
     private static long parseDuration(String value) {
-        // TODO
-        //throw new UnsupportedOperationException("Not yet implemented");
-        throw new IllegalArgumentException("value doesn't meet described rules");
+        Matcher matcher = durationStringPattern.matcher(value);
+        if (matcher.matches()) {
+            char sign = matcher.group(1).charAt(0);
+            long days = Long.parseLong(matcher.group(2), 10);
+            long hours = Long.parseLong(matcher.group(3), 10);
+            long minutes = Long.parseLong(matcher.group(4), 10);
+            long seconds = Long.parseLong(matcher.group(5), 10);
+            long milliseconds = Long.parseLong(matcher.group(6), 10);
+
+            ValueDuration duration = new ValueDuration(days, hours, minutes, seconds, milliseconds);
+            long millisecondsTotal = duration.getValue();
+
+            switch (sign) {
+                case '+':
+                    return millisecondsTotal;
+                case '-':
+                    return -millisecondsTotal;
+            }
+        }
+        throw new IllegalArgumentException("Cannot parse duration string");
     }
 
     @Override
@@ -132,43 +154,71 @@ public class ValueDuration extends ValueSimple<Long> {
 
     @Override
     public ValueDuration addValue(Value value) {
-        // TODO
-        throw new UnsupportedOperationException("Not yet implemented");
+        sameTypesOrThrow(value, Operation.ADD);
+        if (isNull() || value.isNull())
+            return new ValueDuration((Long) null);
+        return new ValueDuration(getValue() + ((ValueDuration) value).getValue());
     }
 
     @Override
     public ValueDuration subtract(Value value) {
-        // TODO
-        throw new UnsupportedOperationException("Not yet implemented");
+        sameTypesOrThrow(value, Operation.SUBTRACT);
+        if (isNull() || value.isNull())
+            return new ValueDuration((Long) null);
+        return new ValueDuration(getValue() - ((ValueDuration) value).getValue());
     }
 
     @Override
     public ValueDuration multiply(Value value) {
-        // TODO
-        throw new UnsupportedOperationException("Not yet implemented");
+        sameTypesOrThrow(value, Operation.MULTIPLY);
+        if (isNull() || value.isNull())
+            return new ValueDuration((Long) null);
+        return new ValueDuration(getValue() * ((ValueDuration) value).getValue());
     }
 
     @Override
     public Value divide(Value value) {
-        // TODO
-        throw new UnsupportedOperationException("Not yet implemented");
+        sameTypesOrThrow(value, Operation.DIVIDE);
+        if (value.isNull())
+            return new ValueDuration((Long) null);
+        if (((ValueInt) value).getValue() == 0l)
+            throw new ArithmeticException("Division by zero.");
+        if (isNull())
+            return new ValueDuration((Long) null);
+        return new ValueDuration((long) getValue() / ((ValueDuration) value).getValue());
     }
 
     @Override
     public ValueDuration modulo(Value value) {
-        // TODO
-        throw new UnsupportedOperationException("Not yet implemented");
+        sameTypesOrThrow(value, Operation.MODULO);
+        if (value.isNull())
+            return new ValueDuration((Long) null);
+        if (((ValueInt) value).getValue() == 0l)
+            throw new ArithmeticException("Division by zero.");
+        if (isNull())
+            return new ValueDuration((Long) null);
+        return new ValueDuration(getValue() % ((ValueDuration) value).getValue());
     }
 
     @Override
     public ValueDuration negate() {
-        // TODO
-        throw new UnsupportedOperationException("Not yet implemented");
+        return new ValueDuration(isNull() ? null : -getValue());
     }
 
     @Override
     public Value convertTo(Type type) {
-        // TODO
-        throw new UnsupportedOperationException("Not yet implemented");
+        switch (type.getPrimaryType()) {
+            case DOUBLE:
+                return new ValueDouble(getValue() == null ? null : getValue().doubleValue());
+            case DURATION:
+                return this;
+            case INT:
+                return new ValueInt(getValue());
+            case STRING:
+                return getValue() == null ? ValueString.NULL_STRING : new ValueString(Long.toString(getValue()
+                        .longValue()));
+            default:
+                throw new UnsupportedConversionException(getType(), type);
+        }
     }
 }
