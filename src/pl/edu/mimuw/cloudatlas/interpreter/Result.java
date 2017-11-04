@@ -32,6 +32,7 @@ import pl.edu.mimuw.cloudatlas.model.Type;
 import pl.edu.mimuw.cloudatlas.model.TypeCollection;
 import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueList;
+import pl.edu.mimuw.cloudatlas.model.ValueNull;
 
 abstract class Result {
     public interface BinaryOperation {
@@ -151,13 +152,29 @@ abstract class Result {
     public abstract ValueList getColumn();
 
     public ResultSingle aggregationOperation(AggregationOperation operation) {
-        // TODO
-        throw new UnsupportedOperationException("Not yet implemented");
+        if (!this.getType().isCollection()) {
+            if (this.getValue().getType().getPrimaryType() == Type.PrimaryType.NULL) {
+                Value res = ValueNull.getInstance();
+                return new ResultSingle(res);
+            }
+            throw new IllegalArgumentException("Aggregated value must be a collection.");
+        }
+        TypeCollection inputCollectionType = (TypeCollection) this.getType();
+        Type elementType = inputCollectionType.getElementType();
+        TypeCollection outputCollectionType = new TypeCollection(Type.PrimaryType.LIST, elementType);
+        ValueList inputList = (ValueList) this.getValue().convertTo(outputCollectionType);
+        return new ResultSingle(operation.perform(inputList));
     }
 
     public Result transformOperation(TransformOperation operation) {
-        // TODO
-        throw new UnsupportedOperationException("Not yet implemented");
+        if (!this.getType().isCollection()) {
+            throw new IllegalArgumentException("transformed value must be a collection.");
+        }
+        TypeCollection inputCollectionType = (TypeCollection) this.getType();
+        Type elementType = inputCollectionType.getElementType();
+        TypeCollection outputCollectionType = new TypeCollection(Type.PrimaryType.LIST, elementType);
+        ValueList inputList = (ValueList) this.getValue().convertTo(outputCollectionType);
+        return new ResultSingle(operation.perform(inputList));
     }
 
     public Result isEqual(Result right) {

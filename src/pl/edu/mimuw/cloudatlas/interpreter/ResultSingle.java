@@ -58,6 +58,7 @@ class ResultSingle extends Result {
 
     @Override
     public ValueList getList() {
+        // TODO
         throw new UnsupportedOperationException("Not a ResultList.");
     }
 

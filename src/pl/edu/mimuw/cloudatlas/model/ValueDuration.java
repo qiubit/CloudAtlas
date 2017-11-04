@@ -215,8 +215,7 @@ public class ValueDuration extends ValueSimple<Long> {
             case INT:
                 return new ValueInt(getValue());
             case STRING:
-                return getValue() == null ? ValueString.NULL_STRING : new ValueString(Long.toString(getValue()
-                        .longValue()));
+                return getValue() == null ? ValueString.NULL_STRING : new ValueString(Long.toString(getValue()));
             default:
                 throw new UnsupportedConversionException(getType(), type);
         }
