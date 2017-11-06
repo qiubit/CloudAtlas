@@ -8,6 +8,7 @@ from abc import abstractmethod
 from threading import Thread
 
 import psutil
+import redis
 
 
 EXITING = False
@@ -131,7 +132,7 @@ class AttributeFetcher(object):
     def fetch_attribute_value(self):
         pass
 
-    def get_worker(self):
+    def get_worker(self, redisDb):
         fetcher = self
         class worker(Thread):
             def run(self):
@@ -146,6 +147,10 @@ class AttributeFetcher(object):
                             attr.get_name(),
                             attr.get_value_str()
                         )
+                    )
+                    redisDb.lpush(
+                        attr.get_name(),
+                        '{0:f}:{1:s}'.format(attr.get_timestamp(), attr.get_value_str())
                     )
         return worker()
 
@@ -190,7 +195,7 @@ class NumericAttributeFetcher(AttributeFetcher):
             cur_node = cur_node.next
         return AttributeValue(time.time(), 'avg', total / list_size)
 
-    def get_worker(self):
+    def get_worker(self, redisDb):
         fetcher = self
         class worker(Thread):
             def run(self):
@@ -205,6 +210,10 @@ class NumericAttributeFetcher(AttributeFetcher):
                             attr.get_name(),
                             attr.get_value_str()
                         )
+                    )
+                    redisDb.lpush(
+                        attr.get_name(),
+                        '{0:f}:{1:s}'.format(attr.get_timestamp(), attr.get_value_str())
                     )
                     fetcher.clear_average_window()
                     if fetcher.average_window.get_head():
@@ -223,6 +232,10 @@ class NumericAttributeFetcher(AttributeFetcher):
                                     average_attr.get_value_str()
                                 )
                             )
+                            redisDb.lpush(
+                                attr.get_name() + '_avg',
+                                '{0:f}:{1:s}'.format(attr.get_timestamp(), attr.get_value_str())
+                            )
                             fetcher.average_window.clear()
         return worker()
 
@@ -238,10 +251,11 @@ class CPUFetcher(NumericAttributeFetcher):
 
 
 if __name__ == '__main__':
+    r = redis.Redis(host='localhost', port=6379, db=0)
     uf = UsersFetcher(5)
-    uf.get_worker().start()
+    uf.get_worker(r).start()
     cpuf = CPUFetcher(1, 10)
-    cpuf.get_worker().start()
+    cpuf.get_worker(r).start()
     while True:
         try:
             time.sleep(1)
