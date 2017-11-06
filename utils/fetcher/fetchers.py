@@ -188,7 +188,7 @@ class NumericAttributeFetcher(AttributeFetcher):
             total += cur_node.get_value().get_value()
             i += 1
             cur_node = cur_node.next
-        return AttributeValue(time.time(), 'avgtest', total / list_size)
+        return AttributeValue(time.time(), 'avg', total / list_size)
 
     def get_worker(self):
         fetcher = self
@@ -230,6 +230,11 @@ class NumericAttributeFetcher(AttributeFetcher):
 class CPUFetcher(NumericAttributeFetcher):
     def fetch_attribute_value(self):
         return AttributeValue(time.time(), 'cpu_percent', psutil.cpu_percent())
+
+    def get_average(self):
+        avg_attr = NumericAttributeFetcher.get_average(self)
+        avg_attr.name = 'cpu_percent'
+        return avg_attr
 
 
 if __name__ == '__main__':
