@@ -8,6 +8,7 @@ from abc import abstractmethod
 from threading import Thread
 
 import psutil
+import subprocess
 import redis
 
 
@@ -160,7 +161,17 @@ class UsersFetcher(AttributeFetcher):
         ttys = psutil.users()
         for session in ttys:
             all_users.add(session.name)
-        return AttributeValue(time.time(), 'users', all_users)
+        return AttributeValue(time.time(), 'logged_users', all_users)
+
+
+class KernelVerFetcher(AttributeFetcher):
+    def fetch_attribute_value(self):
+        return AttributeValue(time.time(), 'kernel_ver', subprocess.check_output(['uname', '-r'])[:-1])
+
+
+class NumCoresFetcher(AttributeFetcher):
+    def fetch_attribute_value(self):
+        return AttributeValue(time.time(), 'num_cores', psutil.cpu_count(logical=False))
 
 
 class NumericAttributeFetcher(AttributeFetcher):
@@ -242,20 +253,101 @@ class NumericAttributeFetcher(AttributeFetcher):
 
 class CPUFetcher(NumericAttributeFetcher):
     def fetch_attribute_value(self):
-        return AttributeValue(time.time(), 'cpu_percent', psutil.cpu_percent())
+        return AttributeValue(time.time(), 'cpu_load', psutil.cpu_percent())
 
     def get_average(self):
         avg_attr = NumericAttributeFetcher.get_average(self)
-        avg_attr.name = 'cpu_percent'
+        avg_attr.name = 'cpu_load'
         return avg_attr
+
+
+class FreeDiskFetcher(NumericAttributeFetcher):
+    def fetch_attribute_value(self):
+        return AttributeValue(time.time(), 'free_disk', psutil.disk_usage('/').free)
+
+    def get_average(self):
+        avg_attr = NumericAttributeFetcher.get_average(self)
+        avg_attr.name = 'free_disk'
+        return avg_attr
+
+
+class TotalDiskFetcher(NumericAttributeFetcher):
+    def fetch_attribute_value(self):
+        return AttributeValue(time.time(), 'total_disk', psutil.disk_usage('/').total)
+
+    def get_average(self):
+        avg_attr = NumericAttributeFetcher.get_average(self)
+        avg_attr.name = 'total_disk'
+        return avg_attr
+
+
+class FreeRAMFetcher(NumericAttributeFetcher):
+    def fetch_attribute_value(self):
+        return AttributeValue(time.time(), 'free_ram', psutil.virtual_memory().free)
+
+    def get_average(self):
+        avg_attr = NumericAttributeFetcher.get_average(self)
+        avg_attr.name = 'free_ram'
+        return avg_attr
+
+
+class TotalRAMFetcher(NumericAttributeFetcher):
+    def fetch_attribute_value(self):
+        return AttributeValue(time.time(), 'total_ram', psutil.virtual_memory().total)
+
+    def get_average(self):
+        avg_attr = NumericAttributeFetcher.get_average(self)
+        avg_attr.name = 'total_ram'
+        return avg_attr
+
+
+class FreeSwapFetcher(NumericAttributeFetcher):
+    def fetch_attribute_value(self):
+        return AttributeValue(time.time(), 'free_swap', psutil.swap_memory().free)
+
+    def get_average(self):
+        avg_attr = NumericAttributeFetcher.get_average(self)
+        avg_attr.name = 'free_swap'
+        return avg_attr
+
+
+class TotalSwapFetcher(NumericAttributeFetcher):
+    def fetch_attribute_value(self):
+        return AttributeValue(time.time(), 'total_swap', psutil.swap_memory().total)
+
+    def get_average(self):
+        avg_attr = NumericAttributeFetcher.get_average(self)
+        avg_attr.name = 'total_swap'
+        return avg_attr
+
+
+class NumProcessesFetcher(NumericAttributeFetcher):
+    def fetch_attribute_value(self):
+        return AttributeValue(time.time(), 'num_processes', len(psutil.pids()))
+
+    def get_average(self):
+        avg_attr = NumericAttributeFetcher.get_average(self)
+        avg_attr.name = 'num_processes'
+        return avg_attr
+
+
+    def get_average(self):
+        avg_attr = NumericAttributeFetcher.get_average(self)
+        avg_attr.name = 'num_cores'
+        return avg_attr
+
 
 
 if __name__ == '__main__':
     r = redis.Redis(host='localhost', port=6379, db=0)
-    uf = UsersFetcher(5)
-    uf.get_worker(r).start()
-    cpuf = CPUFetcher(1, 10)
-    cpuf.get_worker(r).start()
+    numFetchers = [CPUFetcher, FreeDiskFetcher, TotalDiskFetcher, FreeRAMFetcher, TotalRAMFetcher, FreeSwapFetcher, TotalSwapFetcher, NumProcessesFetcher]
+    otherFetchers = [UsersFetcher, KernelVerFetcher, NumCoresFetcher]
+    for fetcher_class in numFetchers:
+        f = fetcher_class(10, 30)
+        f.get_worker(r).start()
+    for fetcher_class in otherFetchers:
+        f = fetcher_class(10)
+        f.get_worker(r).start()
     while True:
         try:
             time.sleep(1)
