@@ -56,8 +56,7 @@ public class ValueList extends ValueSimple<List<Value>> implements List<Value> {
      */
     public ValueList(List<Value> value, Type elementType) {
         this(elementType);
-        if (value != null)
-            setValue(value);
+        setValue(value);
     }
 
     /**

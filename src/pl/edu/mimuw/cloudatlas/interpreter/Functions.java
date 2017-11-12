@@ -57,6 +57,18 @@ class Functions {
                 if (v.isNull())
                     return new ValueDouble(null);
                 return new ValueDouble((double) Math.round(((ValueDouble) v).getValue()));
+            } else if (v.getType().isCollection()) {
+                TypeCollection t = (TypeCollection) v.getType();
+                if (t.getElementType().isCompatible(TypePrimitive.DOUBLE)) {
+                    List<Value> vResult = new ArrayList<>();
+                    for (Value vInternal : (ValueList) v) {
+                        vResult.add(
+                            new ValueDouble((double) Math.round(((ValueDouble) vInternal).getValue()))
+                        );
+                    }
+                    return new ValueList(vResult, t.getElementType());
+                }
+                throw new IllegalArgumentException("Collection must have value type " + TypePrimitive.DOUBLE + ".");
             }
             throw new IllegalArgumentException("Value must have type " + TypePrimitive.DOUBLE + ".");
         }

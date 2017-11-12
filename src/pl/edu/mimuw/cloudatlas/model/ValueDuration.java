@@ -154,6 +154,8 @@ public class ValueDuration extends ValueSimple<Long> {
 
     @Override
     public ValueDuration addValue(Value value) {
+        if (value.getType().getPrimaryType() == Type.PrimaryType.INT)
+            return new ValueDuration(this.getValue() + ((ValueInt) value).getValue());
         sameTypesOrThrow(value, Operation.ADD);
         if (isNull() || value.isNull())
             return new ValueDuration((Long) null);
@@ -162,6 +164,8 @@ public class ValueDuration extends ValueSimple<Long> {
 
     @Override
     public ValueDuration subtract(Value value) {
+        if (value.getType().getPrimaryType() == Type.PrimaryType.INT)
+            return new ValueDuration(this.getValue() - ((ValueInt) value).getValue());
         sameTypesOrThrow(value, Operation.SUBTRACT);
         if (isNull() || value.isNull())
             return new ValueDuration((Long) null);
@@ -170,6 +174,8 @@ public class ValueDuration extends ValueSimple<Long> {
 
     @Override
     public ValueDuration multiply(Value value) {
+        if (value.getType().getPrimaryType() == Type.PrimaryType.INT)
+            return new ValueDuration(this.getValue() * ((ValueInt) value).getValue());
         sameTypesOrThrow(value, Operation.MULTIPLY);
         if (isNull() || value.isNull())
             return new ValueDuration((Long) null);
@@ -178,6 +184,8 @@ public class ValueDuration extends ValueSimple<Long> {
 
     @Override
     public Value divide(Value value) {
+        if (value.getType().getPrimaryType() == Type.PrimaryType.INT)
+            return new ValueDuration(this.getValue() / ((ValueInt) value).getValue());
         sameTypesOrThrow(value, Operation.DIVIDE);
         if (value.isNull())
             return new ValueDuration((Long) null);
