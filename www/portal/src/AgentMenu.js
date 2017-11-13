@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { Segment, Header, Menu } from 'semantic-ui-react';
 import PropTypes from 'prop-types';
 import Contacts from './Contacts';
+import Structure from './Structure';
 
 
 class AgentMenu extends Component {
@@ -53,7 +54,7 @@ class AgentMenu extends Component {
       <Segment>
         <Header onClick={this.handleAgentNameClick} as='h1'><a>Agent {this.props.agent}</a></Header>
         {(this.state.currentPage === this.PageEnum.MENU) && <MainMenu />}
-        {(this.state.currentPage === this.PageEnum.STRUCTURE) && (<p>Structure</p>)}
+        {(this.state.currentPage === this.PageEnum.STRUCTURE) && (<Structure />)}
         {(this.state.currentPage === this.PageEnum.QUERIES) && (<p>Queries</p>)}
         {(this.state.currentPage === this.PageEnum.CONTACTS) && (<Contacts agentAddress={this.props.agent} />)}
       </Segment>
