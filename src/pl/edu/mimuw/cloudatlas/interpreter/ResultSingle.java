@@ -41,12 +41,36 @@ class ResultSingle extends Result {
 
     @Override
     protected ResultColumn binaryOperationTyped(BinaryOperation operation, ResultColumn right) {
-        ValueList rightValue = (ValueList) right.getValue();
-        ValueList outputValue = new ValueList(this.getType());
-        for (Value v : rightValue) {
-            outputValue.add(operation.perform(this.getValue(), v));
+        Type resultElementType = null;
+        if (operation == Result.IS_LOWER_THAN || operation == Result.REG_EXPR || operation == Result.IS_EQUAL) {
+            resultElementType = TypePrimitive.BOOLEAN;
+        } else if (operation == Result.DIVIDE) {
+            resultElementType = TypePrimitive.DOUBLE;
+        } else {
+            resultElementType = value.getType();
         }
-        return new ResultColumn(outputValue);
+        ValueList resultList = new ValueList(resultElementType);
+        for (Value v : (ValueList) right.getValue()) {
+            resultList.add(operation.perform(this.getValue(), v));
+        }
+        return new ResultColumn(resultList);
+    }
+
+    @Override
+    protected ResultList binaryOperationTyped(BinaryOperation operation, ResultList right) {
+        Type resultElementType = null;
+        if (operation == Result.IS_LOWER_THAN || operation == Result.REG_EXPR || operation == Result.IS_EQUAL) {
+            resultElementType = TypePrimitive.BOOLEAN;
+        } else if (operation == Result.DIVIDE) {
+            resultElementType = TypePrimitive.DOUBLE;
+        } else {
+            resultElementType = value.getType();
+        }
+        ValueList resultList = new ValueList(resultElementType);
+        for (Value v : (ValueList) right.getValue()) {
+            resultList.add(operation.perform(this.getValue(), v));
+        }
+        return new ResultList(resultList);
     }
 
     @Override

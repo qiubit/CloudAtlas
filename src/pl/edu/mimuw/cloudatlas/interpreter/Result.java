@@ -36,7 +36,7 @@ import pl.edu.mimuw.cloudatlas.model.ValueNull;
 
 abstract class Result {
     public enum ResultType {
-        SINGLE, COLUMN
+        SINGLE, COLUMN, LIST
     }
 
     public interface BinaryOperation {
@@ -143,6 +143,8 @@ abstract class Result {
 
     protected abstract Result binaryOperationTyped(BinaryOperation operation, ResultColumn right);
 
+    protected abstract Result binaryOperationTyped(BinaryOperation operation, ResultList right);
+
     public Result binaryOperation(BinaryOperation operation, Result right) {
         return right.callMe(operation, this);
     }
@@ -174,13 +176,13 @@ abstract class Result {
 
     public Result transformOperation(TransformOperation operation) {
         if (!this.getType().isCollection()) {
-            throw new IllegalArgumentException("transformed value must be a collection.");
+            throw new IllegalArgumentException("Transformed value must be a collection.");
         }
         TypeCollection inputCollectionType = (TypeCollection) this.getType();
         Type elementType = inputCollectionType.getElementType();
         TypeCollection outputCollectionType = new TypeCollection(Type.PrimaryType.LIST, elementType);
         ValueList inputList = (ValueList) this.getValue().convertTo(outputCollectionType);
-        return new ResultSingle(operation.perform(inputList));
+        return new ResultList(operation.perform(inputList));
     }
 
     public Result isEqual(Result right) {

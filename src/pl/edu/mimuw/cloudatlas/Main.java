@@ -84,7 +84,8 @@ public class Main {
                     zmi.getAttributes().addOrChange(r.getName(), r.getValue());
                 }
             } catch (InterpreterException exception) {
-                exception.printStackTrace();
+                // Enable this to show debug output
+                // exception.printStackTrace();
             }
         }
     }
