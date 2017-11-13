@@ -24,30 +24,38 @@
 
 package pl.edu.mimuw.cloudatlas.model;
 
+import java.io.Serializable;
+import java.text.ParseException;
+
 import pl.edu.mimuw.cloudatlas.model.Value;
-import pl.edu.mimuw.cloudatlas.model.ValueBoolean;
+import pl.edu.mimuw.cloudatlas.model.ValueString;
 
 /**
- * A class that wraps a Java <code>Boolean</code> object.
+ * A class that wraps a Java <code>String</code> object.
  */
-public class ValueBoolean extends ValueSimple<Boolean> {
+public class ValueString extends ValueSimple<String> implements Serializable {
     /**
-     * Constructs a new <code>ValueBoolean</code> object wrapping the specified <code>value</code>.
+     * A result of conversion values representing null to <code>ValueString</code>.
+     */
+    protected static final ValueString NULL_STRING = new ValueString("NULL");
+
+    /**
+     * Constructs a new <code>ValueString</code> object wrapping the specified <code>value</code>.
      *
      * @param value the value to wrap
      */
-    public ValueBoolean(Boolean value) {
+    public ValueString(String value) {
         super(value);
     }
 
     @Override
     public Type getType() {
-        return TypePrimitive.BOOLEAN;
+        return TypePrimitive.STRING;
     }
 
     @Override
     public Value getDefaultValue() {
-        return new ValueBoolean(false);
+        return new ValueString("");
     }
 
     @Override
@@ -55,39 +63,59 @@ public class ValueBoolean extends ValueSimple<Boolean> {
         sameTypesOrThrow(value, Operation.COMPARE);
         if (isNull() || value.isNull())
             return new ValueBoolean(null);
-        return new ValueBoolean(!getValue() && ((ValueBoolean) value).getValue());
+        return new ValueBoolean(getValue().compareTo(((ValueString) value).getValue()) < 0);
     }
 
     @Override
-    public ValueBoolean and(Value value) {
-        sameTypesOrThrow(value, Operation.AND);
+    public ValueString addValue(Value value) {
+        sameTypesOrThrow(value, Operation.ADD);
+        if (isNull() || value.isNull())
+            return new ValueString(null);
+        return new ValueString(getValue().concat(((ValueString) value).getValue()));
+    }
+
+    @Override
+    public ValueBoolean regExpr(Value value) {
+        sameTypesOrThrow(value, Operation.REG_EXPR);
         if (isNull() || value.isNull())
             return new ValueBoolean(null);
-        return new ValueBoolean(getValue() && ((ValueBoolean) value).getValue());
-    }
-
-    @Override
-    public ValueBoolean or(Value value) { // -
-        sameTypesOrThrow(value, Operation.OR);
-        if (isNull() || value.isNull())
-            return new ValueBoolean(null);
-        return new ValueBoolean(getValue() || ((ValueBoolean) value).getValue());
-    }
-
-    @Override
-    public ValueBoolean negate() { // !
-        return new ValueBoolean(isNull() ? null : !getValue());
+        return new ValueBoolean(getValue().matches(((ValueString) value).getValue()));
     }
 
     @Override
     public Value convertTo(Type type) {
         switch (type.getPrimaryType()) {
             case BOOLEAN:
-                return this;
+                return new ValueBoolean(Boolean.parseBoolean(getValue()));
+            case DOUBLE:
+                try {
+                    return new ValueDouble(Double.parseDouble(getValue()));
+                } catch (NumberFormatException exception) {
+                    return new ValueDouble(null);
+                }
+            case DURATION:
+                return new ValueDuration(getValue());
+            case INT:
+                try {
+                    return new ValueInt(Long.parseLong(getValue()));
+                } catch (NumberFormatException exception) {
+                    return new ValueInt(null);
+                }
             case STRING:
-                return getValue() == null ? ValueString.NULL_STRING : new ValueString(getValue().toString());
+                return getValue() == null ? ValueString.NULL_STRING : this;
+            case TIME:
+                try {
+                    return new ValueTime(getValue());
+                } catch (ParseException exception) {
+                    return new ValueTime((Long) null);
+                }
             default:
                 throw new UnsupportedConversionException(getType(), type);
         }
+    }
+
+    @Override
+    public ValueInt valueSize() {
+        return new ValueInt(getValue() == null ? null : (long) getValue().length());
     }
 }

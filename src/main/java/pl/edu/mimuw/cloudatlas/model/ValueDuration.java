@@ -24,6 +24,7 @@
 
 package pl.edu.mimuw.cloudatlas.model;
 
+import java.io.Serializable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -32,7 +33,7 @@ import java.util.regex.Pattern;
  * A class representing duration in milliseconds. The duration can be negative. This is a simple wrapper of a Java
  * <code>Long</code> object.
  */
-public class ValueDuration extends ValueSimple<Long> {
+public class ValueDuration extends ValueSimple<Long> implements Serializable {
     private static final Pattern durationStringPattern =
             Pattern.compile("([+-])(\\d) (\\d\\d):(\\d\\d):(\\d\\d)\\.(\\d\\d\\d)");
     /**

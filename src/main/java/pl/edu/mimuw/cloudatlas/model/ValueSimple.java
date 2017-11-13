@@ -24,58 +24,68 @@
 
 package pl.edu.mimuw.cloudatlas.model;
 
+import java.io.Serializable;
+
 /**
- * A type of a value that may be stored as an attribute.
+ * Convenient class for wrapping Java types into <code>Value</code> objects.
+ * <p>
+ * This class is immutable.
+ *
+ * @param <T> a wrapped type
  */
-public abstract class Type {
-    /**
-     * A primary type. This is a characteristic that every type has. It can be extended: for instance a collection may
-     * be parameterized with a type of stored values.
-     */
-    public static enum PrimaryType {
-        BOOLEAN, CONTACT, DOUBLE, DURATION, INT, LIST, NULL, SET, STRING, TIME,
-    }
-
-    private final PrimaryType primaryType;
+abstract class ValueSimple<T> extends Value implements Serializable {
+    private T value;
 
     /**
-     * Creates a <code>Type</code> object with a given primary type.
+     * Constructs a new <code>Value</code> wrapping the specified <code>value</code>.
      *
-     * @param primaryType a primary type for this type
+     * @param value the value to wrap
      */
-    public Type(PrimaryType primaryType) {
-        this.primaryType = primaryType;
+    public ValueSimple(T value) {
+        setValue(value);
     }
 
     /**
-     * Returns a primary type of this type.
+     * Returns a hash code value for this object. This is a hash code of underlying wrapped object.
      *
-     * @return a primary type
+     * @return the hash code for this value
      */
-    public PrimaryType getPrimaryType() {
-        return primaryType;
+    @Override
+    public int hashCode() {
+        return getValue().hashCode();
     }
 
     /**
-     * Indicates whether this type can be implicitly "cast" to given one and vice verse. This is introduced to deal with
-     * null values. In practice, two types are compatible either if they are the same or if one them is a special
-     * "null type".
+     * Gets a wrapped object.
      *
-     * @param type a type to check
-     * @return whether two types are compatible with each other
-     * @see TypePrimitive#NULL
-     * @see ValueNull
+     * @return the wrapped value
      */
-    public boolean isCompatible(Type type) {
-        return getPrimaryType() == PrimaryType.NULL || type.getPrimaryType() == PrimaryType.NULL;
+    public T getValue() {
+        return value;
     }
 
     /**
-     * Indicates whether this type represents a collection.
+     * Sets a wrapped value. This method is not public to ensure that the underlying value cannot be changed.
      *
-     * @return true for collections, false otherwise
+     * @param value the value to set
      */
-    public boolean isCollection() {
-        return false;
+    void setValue(T value) {
+        this.value = value;
+    }
+
+    @Override
+    public boolean isNull() {
+        return value == null;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public Value isEqual(Value v) {
+        sameTypesOrThrow(v, Operation.EQUAL);
+        if (isNull() && v.isNull())
+            return new ValueBoolean(true);
+        else if (isNull() || v.isNull())
+            return new ValueBoolean(false);
+        return new ValueBoolean(value.equals(((ValueSimple<T>) v).getValue()));
     }
 }

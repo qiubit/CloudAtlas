@@ -24,6 +24,7 @@
 
 package pl.edu.mimuw.cloudatlas.model;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -33,13 +34,14 @@ import java.util.List;
 /**
  * Represent a fully qualified name of a zone, also known as a global name or a path name. This class is immutable.
  */
-public class PathName {
+public class PathName implements Serializable {
+    private static final long serialVersionUID = 227L;
     /**
      * The object representing a name of the root zone (/).
      */
     public static final PathName ROOT = new PathName("/");
 
-    private final List<String> components;
+    private final ArrayList<String> components;
     private final String name;
 
     /**
@@ -57,7 +59,7 @@ public class PathName {
         if (!name.matches("(/\\w+)*"))
             throw new IllegalArgumentException("Incorrect fully qualified name: " + name + ".");
         this.name = name;
-        components = name.equals("") ? new ArrayList<String>() : Arrays.asList(name.substring(1).split("/"));
+        components = name.equals("") ? new ArrayList<String>() : new ArrayList<String>(Arrays.asList(name.substring(1).split("/")));
     }
 
     /**

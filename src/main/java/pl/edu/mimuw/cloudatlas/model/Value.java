@@ -24,7 +24,6 @@
 
 package pl.edu.mimuw.cloudatlas.model;
 
-import pl.edu.mimuw.cloudatlas.model.Value;
 
 /**
  * A single value stored as an attribute.

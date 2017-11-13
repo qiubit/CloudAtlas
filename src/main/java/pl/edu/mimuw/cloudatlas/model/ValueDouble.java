@@ -24,37 +24,32 @@
 
 package pl.edu.mimuw.cloudatlas.model;
 
-import java.text.ParseException;
-
 import pl.edu.mimuw.cloudatlas.model.Value;
-import pl.edu.mimuw.cloudatlas.model.ValueString;
+import pl.edu.mimuw.cloudatlas.model.ValueDouble;
+
+import java.io.Serializable;
 
 /**
- * A class that wraps a Java <code>String</code> object.
+ * A class that wraps a Java <code>Double</code> object.
  */
-public class ValueString extends ValueSimple<String> {
+public class ValueDouble extends ValueSimple<Double> implements Serializable {
     /**
-     * A result of conversion values representing null to <code>ValueString</code>.
-     */
-    protected static final ValueString NULL_STRING = new ValueString("NULL");
-
-    /**
-     * Constructs a new <code>ValueString</code> object wrapping the specified <code>value</code>.
+     * Constructs a new <code>ValueDouble</code> object wrapping the specified <code>value</code>.
      *
      * @param value the value to wrap
      */
-    public ValueString(String value) {
+    public ValueDouble(Double value) {
         super(value);
     }
 
     @Override
     public Type getType() {
-        return TypePrimitive.STRING;
+        return TypePrimitive.DOUBLE;
     }
 
     @Override
     public Value getDefaultValue() {
-        return new ValueString("");
+        return new ValueDouble(0.0);
     }
 
     @Override
@@ -62,59 +57,57 @@ public class ValueString extends ValueSimple<String> {
         sameTypesOrThrow(value, Operation.COMPARE);
         if (isNull() || value.isNull())
             return new ValueBoolean(null);
-        return new ValueBoolean(getValue().compareTo(((ValueString) value).getValue()) < 0);
+        return new ValueBoolean(getValue() < ((ValueDouble) value).getValue());
     }
 
     @Override
-    public ValueString addValue(Value value) {
+    public ValueDouble addValue(Value value) {
         sameTypesOrThrow(value, Operation.ADD);
         if (isNull() || value.isNull())
-            return new ValueString(null);
-        return new ValueString(getValue().concat(((ValueString) value).getValue()));
+            return new ValueDouble(null);
+        return new ValueDouble(getValue() + ((ValueDouble) value).getValue());
     }
 
     @Override
-    public ValueBoolean regExpr(Value value) {
-        sameTypesOrThrow(value, Operation.REG_EXPR);
+    public ValueDouble subtract(Value value) {
+        sameTypesOrThrow(value, Operation.SUBTRACT);
         if (isNull() || value.isNull())
-            return new ValueBoolean(null);
-        return new ValueBoolean(getValue().matches(((ValueString) value).getValue()));
+            return new ValueDouble(null);
+        return new ValueDouble(getValue() - ((ValueDouble) value).getValue());
+    }
+
+    @Override
+    public ValueDouble multiply(Value value) {
+        sameTypesOrThrow(value, Operation.MULTIPLY);
+        if (isNull() || value.isNull())
+            return new ValueDouble(null);
+        return new ValueDouble(getValue() * ((ValueDouble) value).getValue());
+    }
+
+    @Override
+    public ValueDouble divide(Value value) {
+        sameTypesOrThrow(value, Operation.DIVIDE);
+        if (isNull() || value.isNull())
+            return new ValueDouble(null);
+        return new ValueDouble(getValue() / ((ValueDouble) value).getValue());
+    }
+
+    @Override
+    public ValueDouble negate() {
+        return new ValueDouble(isNull() ? null : -getValue());
     }
 
     @Override
     public Value convertTo(Type type) {
         switch (type.getPrimaryType()) {
-            case BOOLEAN:
-                return new ValueBoolean(Boolean.parseBoolean(getValue()));
             case DOUBLE:
-                try {
-                    return new ValueDouble(Double.parseDouble(getValue()));
-                } catch (NumberFormatException exception) {
-                    return new ValueDouble(null);
-                }
-            case DURATION:
-                return new ValueDuration(getValue());
+                return this;
             case INT:
-                try {
-                    return new ValueInt(Long.parseLong(getValue()));
-                } catch (NumberFormatException exception) {
-                    return new ValueInt(null);
-                }
+                return new ValueInt(getValue() == null ? null : getValue().longValue());
             case STRING:
-                return getValue() == null ? ValueString.NULL_STRING : this;
-            case TIME:
-                try {
-                    return new ValueTime(getValue());
-                } catch (ParseException exception) {
-                    return new ValueTime((Long) null);
-                }
+                return getValue() == null ? ValueString.NULL_STRING : new ValueString(getValue().toString());
             default:
                 throw new UnsupportedConversionException(getType(), type);
         }
-    }
-
-    @Override
-    public ValueInt valueSize() {
-        return new ValueInt(getValue() == null ? null : (long) getValue().length());
     }
 }

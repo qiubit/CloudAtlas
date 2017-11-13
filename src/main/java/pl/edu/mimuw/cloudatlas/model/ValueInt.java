@@ -28,10 +28,12 @@ import pl.edu.mimuw.cloudatlas.model.Type.PrimaryType;
 import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueInt;
 
+import java.io.Serializable;
+
 /**
  * A class that wraps a Java <code>Long</code> object.
  */
-public class ValueInt extends ValueSimple<Long> {
+public class ValueInt extends ValueSimple<Long> implements Serializable {
     /**
      * Constructs a new <code>ValueInt</code> object wrapping the specified <code>value</code>.
      *
