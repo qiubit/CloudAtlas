@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
-import { Segment, Header, Menu, Input, Button } from 'semantic-ui-react';
-import PropTypes from 'prop-types';
+import { Segment, Header } from 'semantic-ui-react';
 import { Line } from 'react-chartjs-2';
 
 
@@ -20,19 +19,18 @@ class StructureTree extends Component {
     let attributes = [];
     for (var property in node) {
       if (node.hasOwnProperty(property)) {
-        attributes.push(<p>{property + ": " + node[property]}</p>)
+        attributes.push(<p key={property}>{property + ": " + node[property]}</p>)
       }
     }
     return attributes;
   }
 
   render() {
-    console.log(this.props.tree.length);
     return (
       <div>
         {this.props.tree.map((level) => {
-          return level.map((node) => (
-            <Segment>
+          return level.map((node, idx) => (
+            <Segment key={idx}>
               <Header as='h3'>{this.nodeToPath(node)}</Header>
               {this.nodeToAttributes(node)}
             </Segment>

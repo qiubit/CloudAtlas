@@ -1,7 +1,6 @@
 import React, { Component } from 'react';
 import WelcomeMenu from './WelcomeMenu';
 import AgentMenu from './AgentMenu';
-import logo from './logo.svg';
 import './App.css';
 
 class App extends Component {

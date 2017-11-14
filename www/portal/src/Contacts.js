@@ -78,7 +78,6 @@ class Contacts extends Component {
   }
 
   render() {
-    const menuItemCb = this.handleItemClick;
     const contactsState = this.state;
     const ContactsMenu = () => (
       <Menu fluid vertical>
