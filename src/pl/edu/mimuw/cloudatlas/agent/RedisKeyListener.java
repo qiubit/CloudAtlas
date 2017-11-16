@@ -24,7 +24,7 @@ public class RedisKeyListener {
 
     class ListenerThread extends Thread {
         public void run() {
-            System.out.println(RedisKeyListener.this.j.lindex(key, 0));
+            System.out.println(key + ": " + RedisKeyListener.this.j.lrange(key, 0, -1));
         }
     }
 
