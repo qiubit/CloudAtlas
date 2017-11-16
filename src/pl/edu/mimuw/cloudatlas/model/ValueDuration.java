@@ -34,7 +34,7 @@ import java.util.regex.Pattern;
  */
 public class ValueDuration extends ValueSimple<Long> {
     private static final Pattern durationStringPattern =
-            Pattern.compile("([+-])(\\d) (\\d\\d):(\\d\\d):(\\d\\d)\\.(\\d\\d\\d)");
+            Pattern.compile("([+-])(\\d+) (\\d\\d):(\\d\\d):(\\d\\d)\\.(\\d\\d\\d)");
     /**
      * Constructs a new <code>ValueDuration</code> object wrapping the specified <code>value</code>.
      *
@@ -154,6 +154,8 @@ public class ValueDuration extends ValueSimple<Long> {
 
     @Override
     public ValueDuration addValue(Value value) {
+        if (value.getType().getPrimaryType() == Type.PrimaryType.INT)
+            return new ValueDuration(this.getValue() + ((ValueInt) value).getValue());
         sameTypesOrThrow(value, Operation.ADD);
         if (isNull() || value.isNull())
             return new ValueDuration((Long) null);
@@ -162,6 +164,8 @@ public class ValueDuration extends ValueSimple<Long> {
 
     @Override
     public ValueDuration subtract(Value value) {
+        if (value.getType().getPrimaryType() == Type.PrimaryType.INT)
+            return new ValueDuration(this.getValue() - ((ValueInt) value).getValue());
         sameTypesOrThrow(value, Operation.SUBTRACT);
         if (isNull() || value.isNull())
             return new ValueDuration((Long) null);
@@ -170,6 +174,8 @@ public class ValueDuration extends ValueSimple<Long> {
 
     @Override
     public ValueDuration multiply(Value value) {
+        if (value.getType().getPrimaryType() == Type.PrimaryType.INT)
+            return new ValueDuration(this.getValue() * ((ValueInt) value).getValue());
         sameTypesOrThrow(value, Operation.MULTIPLY);
         if (isNull() || value.isNull())
             return new ValueDuration((Long) null);
@@ -178,6 +184,8 @@ public class ValueDuration extends ValueSimple<Long> {
 
     @Override
     public Value divide(Value value) {
+        if (value.getType().getPrimaryType() == Type.PrimaryType.INT)
+            return new ValueDuration(this.getValue() / ((ValueInt) value).getValue());
         sameTypesOrThrow(value, Operation.DIVIDE);
         if (value.isNull())
             return new ValueDuration((Long) null);
@@ -205,6 +213,27 @@ public class ValueDuration extends ValueSimple<Long> {
         return new ValueDuration(isNull() ? null : -getValue());
     }
 
+    private static String toDurationString(long duration) {
+        String res = "";
+        if (duration < 0) {
+            res += "-";
+            duration = -duration;
+        } else {
+            res += "+";
+        }
+        long days = duration / (60*60*24*1000);
+        duration -= days * (60*60*24*1000);
+        long hours = duration / (60*60*1000);
+        duration -= hours * (60*60*1000);
+        long minutes = duration / (60*1000);
+        duration -= minutes * (60*1000);
+        long seconds = duration / 1000;
+        duration -= seconds * 1000;
+        long milliseconds = duration;
+        String formatted = String.format("%d %02d:%02d:%02d.%03d", days, hours, minutes, seconds, milliseconds);
+        return res + formatted;
+    }
+
     @Override
     public Value convertTo(Type type) {
         switch (type.getPrimaryType()) {
@@ -215,7 +244,7 @@ public class ValueDuration extends ValueSimple<Long> {
             case INT:
                 return new ValueInt(getValue());
             case STRING:
-                return getValue() == null ? ValueString.NULL_STRING : new ValueString(Long.toString(getValue()));
+                return getValue() == null ? ValueString.NULL_STRING : new ValueString(toDurationString(getValue()));
             default:
                 throw new UnsupportedConversionException(getType(), type);
         }

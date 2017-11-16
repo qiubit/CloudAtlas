@@ -137,9 +137,6 @@ public class Interpreter {
                             throw new IllegalArgumentException("All items in top-level SELECT must be aliased.");
                     results.addAll(l);
                 } catch (Exception exception) {
-                    // TODO more sane exception reporting
-                    System.out.println(exception);
-
                     throw new InsideQueryException(PrettyPrinter.print(s), exception);
                 }
             }
@@ -291,7 +288,7 @@ public class Interpreter {
             }
             Value[] valueList = new Value[table.getColumns().size()];
             valueList = colVals.toArray(valueList);
-            Environment env = new Environment(new TableRow(valueList), table.getColumns());
+            Environment env = new Environment(new TableRow(valueList), table.getColumns(), true);
             Result result = selItem.condexpr_.accept(new CondExprInterpreter(), env);
             return new QueryResult(result.getValue());
         }
@@ -304,7 +301,7 @@ public class Interpreter {
             }
             Value[] valueList = new Value[table.getColumns().size()];
             valueList = colVals.toArray(valueList);
-            Environment env = new Environment(new TableRow(valueList), table.getColumns());
+            Environment env = new Environment(new TableRow(valueList), table.getColumns(), true);
             Result result = selItem.condexpr_.accept(new CondExprInterpreter(), env);
             return new QueryResult(new Attribute(selItem.qident_), result.getValue());
         }
@@ -324,7 +321,7 @@ public class Interpreter {
         public Result visit(BoolExprRegExpC expr, Environment env) {
             try {
                 Result left = expr.basicexpr_.accept(new BasicExprInterpreter(), env);
-                return (new ResultSingle(new ValueString(expr.string_))).regExpr(left);
+                return left.regExpr(new ResultSingle(new ValueString(expr.string_)));
             } catch (Exception exception) {
                 throw new InsideQueryException(PrettyPrinter.print(expr), exception);
             }

@@ -35,6 +35,10 @@ import pl.edu.mimuw.cloudatlas.model.ValueList;
 import pl.edu.mimuw.cloudatlas.model.ValueNull;
 
 abstract class Result {
+    public enum ResultType {
+        SINGLE, COLUMN, LIST
+    }
+
     public interface BinaryOperation {
         public Value perform(Value v1, Value v2);
     }
@@ -51,14 +55,14 @@ abstract class Result {
         public ValueList perform(ValueList values);
     }
 
-    private static final BinaryOperation IS_EQUAL = new BinaryOperation() {
+    protected static final BinaryOperation IS_EQUAL = new BinaryOperation() {
         @Override
         public Value perform(Value v1, Value v2) {
             return v1.isEqual(v2);
         }
     };
 
-    private static final BinaryOperation IS_LOWER_THAN = new BinaryOperation() {
+    protected static final BinaryOperation IS_LOWER_THAN = new BinaryOperation() {
         @Override
         public Value perform(Value v1, Value v2) {
             return v1.isLowerThan(v2);
@@ -86,7 +90,7 @@ abstract class Result {
         }
     };
 
-    private static final BinaryOperation DIVIDE = new BinaryOperation() {
+    protected static final BinaryOperation DIVIDE = new BinaryOperation() {
         @Override
         public Value perform(Value v1, Value v2) {
             return v1.divide(v2);
@@ -114,21 +118,21 @@ abstract class Result {
         }
     };
 
-    private static final BinaryOperation REG_EXPR = new BinaryOperation() {
+    protected static final BinaryOperation REG_EXPR = new BinaryOperation() {
         @Override
         public Value perform(Value v1, Value v2) {
             return v1.regExpr(v2);
         }
     };
 
-    private static final UnaryOperation NEGATE = new UnaryOperation() {
+    protected static final UnaryOperation NEGATE = new UnaryOperation() {
         @Override
         public Value perform(Value v) {
             return v.negate();
         }
     };
 
-    private static final UnaryOperation VALUE_SIZE = new UnaryOperation() {
+    protected static final UnaryOperation VALUE_SIZE = new UnaryOperation() {
         @Override
         public Value perform(Value v) {
             return v.valueSize();
@@ -136,6 +140,10 @@ abstract class Result {
     };
 
     protected abstract Result binaryOperationTyped(BinaryOperation operation, ResultSingle right);
+
+    protected abstract Result binaryOperationTyped(BinaryOperation operation, ResultColumn right);
+
+    protected abstract Result binaryOperationTyped(BinaryOperation operation, ResultList right);
 
     public Result binaryOperation(BinaryOperation operation, Result right) {
         return right.callMe(operation, this);
@@ -168,13 +176,13 @@ abstract class Result {
 
     public Result transformOperation(TransformOperation operation) {
         if (!this.getType().isCollection()) {
-            throw new IllegalArgumentException("transformed value must be a collection.");
+            throw new IllegalArgumentException("Transformed value must be a collection.");
         }
         TypeCollection inputCollectionType = (TypeCollection) this.getType();
         Type elementType = inputCollectionType.getElementType();
         TypeCollection outputCollectionType = new TypeCollection(Type.PrimaryType.LIST, elementType);
         ValueList inputList = (ValueList) this.getValue().convertTo(outputCollectionType);
-        return new ResultSingle(operation.perform(inputList));
+        return new ResultList(operation.perform(inputList));
     }
 
     public Result isEqual(Result right) {
@@ -280,4 +288,6 @@ abstract class Result {
     public abstract ResultSingle isNull();
 
     public abstract Type getType();
+
+    public abstract ResultType getResultType();
 }

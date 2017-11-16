@@ -5,20 +5,20 @@ import java.util.concurrent.ThreadLocalRandom;
 import pl.edu.mimuw.cloudatlas.model.*;
 
 
-class ResultColumn extends Result {
+class ResultList extends Result {
     private final Value value;
-    private final ResultType resultType = ResultType.COLUMN;
+    private final ResultType resultType = ResultType.LIST;
 
-    public ResultColumn(Value value) {
+    public ResultList(Value value) {
         if (value.getType().isCollection() || value.isNull())
             this.value = value;
         else
-            throw new IllegalArgumentException("ResultColumn must be a collection");
+            throw new IllegalArgumentException("ResultList must be a collection");
     }
 
     @Override
-    protected ResultColumn binaryOperationTyped(BinaryOperation operation, ResultSingle right) {
-        Type resultElementType;
+    protected ResultList binaryOperationTyped(BinaryOperation operation, ResultSingle right) {
+        Type resultElementType = null;
         if (operation == Result.DIVIDE) {
             resultElementType = TypePrimitive.DOUBLE;
         } else if (operation == Result.REG_EXPR || operation == Result.IS_EQUAL || operation == Result.IS_LOWER_THAN) {
@@ -32,12 +32,17 @@ class ResultColumn extends Result {
         for (Value v : inputList) {
             resultList.add(operation.perform(v, right.getValue()));
         }
-        return new ResultColumn(resultList);
+        return new ResultList(resultList);
     }
 
     @Override
-    protected ResultColumn binaryOperationTyped(BinaryOperation operation, ResultColumn right) {
-        Type resultElementType;
+    protected ResultList binaryOperationTyped(BinaryOperation operation, ResultColumn right) {
+        throw new IllegalArgumentException("Binary operations of ResultList and ResultColumn not supported.");
+    }
+
+    @Override
+    protected ResultList binaryOperationTyped(BinaryOperation operation, ResultList right) {
+        Type resultElementType = null;
         if (operation == Result.IS_LOWER_THAN || operation == Result.REG_EXPR || operation == Result.IS_EQUAL) {
             resultElementType = TypePrimitive.BOOLEAN;
         } else if (operation == Result.DIVIDE) {
@@ -46,23 +51,18 @@ class ResultColumn extends Result {
             resultElementType = ((TypeCollection) value.getType()).getElementType();
         }
         if (((ValueList) value).size() != ((ValueList) right.getValue()).size()) {
-            throw new IllegalArgumentException("Both ResultColumns must have the same size");
+            throw new IllegalArgumentException("Both ResultLists must have the same size");
         }
         ValueList inputList = (ValueList) value;
         ValueList resultList = new ValueList(resultElementType);
         for (int i = 0; i < ((ValueInt) value.valueSize()).getValue(); i++) {
             resultList.add(operation.perform(inputList.get(i), ((ValueList) right.getValue()).get(i)));
         }
-        return new ResultColumn(resultList);
+        return new ResultList(resultList);
     }
 
     @Override
-    protected ResultColumn binaryOperationTyped(BinaryOperation operation, ResultList right) {
-        throw new IllegalArgumentException("Binary operations of ResultColumn and ResultList not supported.");
-    }
-
-    @Override
-    public ResultColumn unaryOperation(UnaryOperation operation) {
+    public ResultList unaryOperation(UnaryOperation operation) {
         Type resultElementType = null;
         if (operation == Result.NEGATE) {
             resultElementType = ((TypeCollection) value.getType()).getElementType();
@@ -74,7 +74,7 @@ class ResultColumn extends Result {
         for (Value v : column) {
             result.add(operation.perform(v));
         }
-        return new ResultColumn(result);
+        return new ResultList(result);
     }
 
     @Override
@@ -89,13 +89,13 @@ class ResultColumn extends Result {
 
     @Override
     public ValueList getList() {
-        throw new UnsupportedOperationException("Not a ResultList.");
+        TypeCollection valueType = (TypeCollection) value.getType();
+        return (ValueList) value.convertTo(new TypeCollection(Type.PrimaryType.LIST, valueType.getElementType()));
     }
 
     @Override
     public ValueList getColumn() {
-        TypeCollection valueType = (TypeCollection) value.getType();
-        return (ValueList) value.convertTo(new TypeCollection(Type.PrimaryType.LIST, valueType.getElementType()));
+        throw new UnsupportedOperationException("Not a ResultColumn.");
     }
 
     @Override
@@ -103,7 +103,7 @@ class ResultColumn extends Result {
         if (size >= 0) {
             TypeCollection valueType = (TypeCollection) value.getType();
             ValueList inputList =
-                (ValueList) value.convertTo(new TypeCollection(Type.PrimaryType.LIST, valueType.getElementType()));
+                    (ValueList) value.convertTo(new TypeCollection(Type.PrimaryType.LIST, valueType.getElementType()));
             ValueList resultList = new ValueList(valueType.getElementType());
             for (int i = 0; i < Math.min(size, inputList.size()); i++) {
                 resultList.add(((ValueList) value).get(i));
@@ -147,16 +147,16 @@ class ResultColumn extends Result {
     }
 
     @Override
-    public ResultColumn convertTo(Type to) {
+    public ResultList convertTo(Type to) {
         if (!to.isCollection()) {
             TypeCollection valueType = (TypeCollection) value.getType();
             ValueList resultList = new ValueList(to);
             for (Value v : (ValueList) value) {
                 resultList.add(v.convertTo(to));
             }
-            return new ResultColumn(resultList);
+            return new ResultList(resultList);
         }
-        return new ResultColumn((ValueList) value.convertTo(to));
+        return new ResultList((ValueList) value.convertTo(to));
     }
 
     @Override
