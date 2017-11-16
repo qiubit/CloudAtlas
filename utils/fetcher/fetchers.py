@@ -10,6 +10,8 @@ from threading import Thread
 import psutil
 import subprocess
 import redis
+import configparser
+import sys
 
 
 EXITING = False
@@ -137,10 +139,14 @@ class AttributeFetcher(object):
         fetcher = self
         class worker(Thread):
             def run(self):
+                time_total = 0
                 while True:
                     if EXITING:
                         break
-                    time.sleep(fetcher.collect_interval)
+                    time.sleep(1)
+                    time_total += 1
+                    if time_total % fetcher.collect_interval != 0:
+                        continue
                     attr = fetcher.fetch_attribute_value()
                     print(
                         "{0:f} - {1:s}: {2:s}".format(
@@ -155,18 +161,10 @@ class AttributeFetcher(object):
                     )
         return worker()
 
-class UsersFetcher(AttributeFetcher):
-    def fetch_attribute_value(self):
-        all_users = set([])
-        ttys = psutil.users()
-        for session in ttys:
-            all_users.add(session.name)
-        return AttributeValue(time.time(), 'logged_users', all_users)
-
 
 class KernelVerFetcher(AttributeFetcher):
     def fetch_attribute_value(self):
-        return AttributeValue(time.time(), 'kernel_ver', subprocess.check_output(['uname', '-r'])[:-1])
+        return AttributeValue(time.time(), 'kernel_ver', subprocess.check_output(['uname', '-r'])[:-1].decode("utf-8"))
 
 
 class NumCoresFetcher(AttributeFetcher):
@@ -210,10 +208,14 @@ class NumericAttributeFetcher(AttributeFetcher):
         fetcher = self
         class worker(Thread):
             def run(self):
+                time_total = 0
                 while True:
                     if EXITING:
                         break
-                    time.sleep(fetcher.collect_interval)
+                    time.sleep(1)
+                    time_total += 1
+                    if time_total % fetcher.collect_interval != 0:
+                        continue
                     attr = fetcher.fetch_attribute_value()
                     print(
                         "{0:f} - {1:s}: {2:s}".format(
@@ -330,23 +332,59 @@ class NumProcessesFetcher(NumericAttributeFetcher):
         avg_attr.name = 'num_processes'
         return avg_attr
 
-
     def get_average(self):
         avg_attr = NumericAttributeFetcher.get_average(self)
         avg_attr.name = 'num_cores'
         return avg_attr
 
 
+class UsersFetcher(NumericAttributeFetcher):
+    def fetch_attribute_value(self):
+        all_users = set([])
+        ttys = psutil.users()
+        for session in ttys:
+            all_users.add(session.name)
+        return AttributeValue(time.time(), 'logged_users', len(all_users))
+
+    def get_average(self):
+        avg_attr = NumericAttributeFetcher.get_average(self)
+        avg_attr.name = 'logged_users'
+        return avg_attr
+
+
+def check_config_dict(key, d, is_section=False):
+    if key not in d:
+        if is_section:
+            print("Error: No {0:s} section in supplied config.ini".format(key))
+        else:
+            print("Error: No {0:s} key in supplied config.ini".format(key))
+        sys.exit(1)
 
 if __name__ == '__main__':
+    args = sys.argv
+    if len(args) < 2:
+        print("Error: No config.ini in script fetcher arguments")
+        sys.exit(1)
+    config = configparser.ConfigParser()
+    config.readfp(open(args[1]))
+    check_config_dict('fetcher', config, is_section=True)
+    config = config['fetcher']
+    check_config_dict('collect_interval', config)
+    check_config_dict('averaging_period', config)
+    collect_interval = int(config['collect_interval'])
+    averaging_period = int(config['averaging_period'])
     r = redis.Redis(host='localhost', port=6379, db=0)
-    numFetchers = [CPUFetcher, FreeDiskFetcher, TotalDiskFetcher, FreeRAMFetcher, TotalRAMFetcher, FreeSwapFetcher, TotalSwapFetcher, NumProcessesFetcher]
-    otherFetchers = [UsersFetcher, KernelVerFetcher, NumCoresFetcher]
+    r.set('collect_interval', collect_interval)
+    r.set('averaging_period', averaging_period)
+    numFetchers = [UsersFetcher, CPUFetcher, FreeDiskFetcher, TotalDiskFetcher, FreeRAMFetcher, TotalRAMFetcher, FreeSwapFetcher, TotalSwapFetcher, NumProcessesFetcher]
+    otherFetchers = [KernelVerFetcher, NumCoresFetcher]
+    numFetcherObjs = []
+    otherFetcherObjs = []
     for fetcher_class in numFetchers:
-        f = fetcher_class(10, 30)
+        f = fetcher_class(collect_interval, averaging_period)
         f.get_worker(r).start()
     for fetcher_class in otherFetchers:
-        f = fetcher_class(10)
+        f = fetcher_class(collect_interval)
         f.get_worker(r).start()
     while True:
         try:
