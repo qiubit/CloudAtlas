@@ -1,6 +1,5 @@
 package pl.edu.mimuw.cloudatlas.agent;
 
-import org.w3c.dom.Attr;
 import pl.edu.mimuw.cloudatlas.interpreter.Interpreter;
 import pl.edu.mimuw.cloudatlas.interpreter.InterpreterException;
 import pl.edu.mimuw.cloudatlas.interpreter.QueryResult;
@@ -21,8 +20,8 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
-import static java.util.concurrent.TimeUnit.*;
 
 class QueryEvaluator implements Runnable {
     private AgentApi agentApi;
@@ -49,9 +48,7 @@ class QueryEvaluator implements Runnable {
             Yylex lex = new Yylex(new ByteArrayInputStream(query.getBytes()));
             try {
                 List<QueryResult> result = interpreter.interpretProgram((new parser(lex)).pProgram());
-                PathName zone = Agent.getPathName(zmi);
                 for (QueryResult r : result) {
-                    System.out.println(zone + ": " + r);
                     zmi.getAttributes().addOrChange(r.getName(), r.getValue());
                 }
             } catch (InterpreterException exception) {
@@ -61,49 +58,111 @@ class QueryEvaluator implements Runnable {
     }
 
     private void evaluateAllQueries() throws Exception {
-        for (String query : agentApi.getQueries().values()) {
-            executeQueries(root, query);
+        for (QueryInformation query : agentApi.getQueries().values()) {
+            synchronized (Agent.attributes_lock) {
+                executeQueries(root, query.getQuery());
+            }
         }
+    }
+
+    public static HashMap<ZMI, List<QueryResult>> getResultsForNonSingletonZMIs(ZMI zmi, String query) {
+        HashMap<ZMI, List<QueryResult>> result = new HashMap<>();
+        addNonSingletonZMIResults(zmi, query, result);
+        return result;
+    }
+
+    private static void addNonSingletonZMIResults(ZMI zmi, String query, HashMap<ZMI, List<QueryResult>> results) {
+        if (zmi.getSons().size() > 0) {
+            try {
+                results.put(zmi, evaluateQueryOnZMI(zmi, query));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            for (ZMI son : zmi.getSons()) {
+                addNonSingletonZMIResults(son, query, results);
+            }
+        }
+    }
+
+    public static List<QueryResult> evaluateQueryOnZMI(ZMI zmi, String query) throws Exception{
+        Interpreter interpreter = new Interpreter(zmi);
+        Yylex lex = new Yylex(new ByteArrayInputStream(query.getBytes()));
+        List<QueryResult> result = interpreter.interpretProgram((new parser(lex)).pProgram());
+        return result;
     }
 }
 
 public class Agent implements AgentApi {
     private static ZMI root;
     private static ArrayList<ValueContact> fallback_contacts = new ArrayList<>();
-    private static HashMap<Attribute, String> queries = new HashMap<>();
+    private static HashMap<Attribute, QueryInformation> queries = new HashMap<>();
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    private static Object fallback_lock = new Object();
+    protected static Object attributes_lock = new Object();
 
 
     @Override
     public ArrayList<ValueContact> getFallbackContacts() {
-        return fallback_contacts;
+        synchronized (fallback_lock) {
+            return fallback_contacts;
+        }
     }
 
     @Override
     public void setFallbackContacts(ArrayList<ValueContact> new_contacts) {
-        fallback_contacts = new ArrayList<>(new_contacts);
+        synchronized (fallback_lock) {
+            fallback_contacts = new ArrayList<>(new_contacts);
+        }
     }
 
     @Override
-    public HashMap<Attribute, String> getQueries() {
-        return queries;
+    public HashMap<Attribute, QueryInformation> getQueries() {
+        synchronized (attributes_lock) {
+            return new HashMap<>(queries);
+        }
     }
 
     @Override
     public void installQuery(Attribute name, String query) {
-        if (!Attribute.isQuery(name)) throw new InvalidParameterException("Attribute not a query");
-        queries.put(name, query);
+        synchronized (attributes_lock) {
+            if (!Attribute.isQuery(name)) throw new InvalidParameterException("Attribute not a query");
+            if (queries.containsKey(name)) throw new InvalidParameterException("Attribute already exists");
+            HashMap<ZMI, List<QueryResult>> query_results = QueryEvaluator.getResultsForNonSingletonZMIs(root, query);
+            if (query_results.size() == 0) throw new InvalidParameterException("Cannot evaluate query on any ZMI");
+            ArrayList<Attribute> result_attributes = new ArrayList<>(query_results.values().iterator().next()
+                    .stream().map(result -> result.getName()).collect(Collectors.toList()));
+            for (Attribute attr : result_attributes) {
+                if (anyNonSingletonZMIContainsAttribute(root, attr))
+                    throw new InvalidParameterException("Query conflicts with existing parameter");
+            }
+
+            for (Entry<ZMI, List<QueryResult>> zmi_results : query_results.entrySet()) {
+                for (QueryResult result : zmi_results.getValue()) {
+                    zmi_results.getKey().getAttributes().add(result.getName(), result.getValue());
+                }
+            }
+
+            queries.put(name, new QueryInformation(query, result_attributes));
+        }
     }
 
     @Override
     public void uninstallQuery(Attribute name) {
-        queries.remove(name);
+        synchronized (attributes_lock) {
+            QueryInformation query_info = queries.get(name);
+            if (query_info != null) {
+                for (Attribute attr : query_info.getAttributes()) {
+                    removeAttributeFromAllNonSingletonZMIs(root, attr);
+                }
+                queries.remove(name);
+            }
+        }
     }
-
 
 
     @Override
     public List<PathName> getAvailableZones() {
+        // zmi is not modified for now so no need to lock
         List<PathName> zones = new ArrayList<>();
         _getAvailableZones(root, zones);
         return zones;
@@ -116,7 +175,25 @@ public class Agent implements AgentApi {
         }
     }
 
-    public static PathName getPathName(ZMI zmi) {
+    private static boolean anyNonSingletonZMIContainsAttribute(ZMI zmi, Attribute attr) {
+        if (zmi.getSons().size() == 0) return false;
+        if (zmi.getAttributes().getOrNull(attr) != null) return true;
+        for (ZMI son : zmi.getSons()) {
+            if (anyNonSingletonZMIContainsAttribute(son, attr)) return true;
+        }
+        return false;
+    }
+
+    private static void removeAttributeFromAllNonSingletonZMIs(ZMI zmi, Attribute attr) {
+        if (zmi.getSons().size() > 0) {
+            zmi.getAttributes().remove(attr);
+            for (ZMI son : zmi.getSons()) {
+                removeAttributeFromAllNonSingletonZMIs(son, attr);
+            }
+        }
+    }
+
+    private static PathName getPathName(ZMI zmi) {
         String name = ((ValueString) zmi.getAttributes().get("name")).getValue();
         return zmi.getFather() == null ? PathName.ROOT : getPathName(zmi.getFather()).levelDown(name);
     }
@@ -139,45 +216,21 @@ public class Agent implements AgentApi {
     }
 
 
-//    @Override
-//    public void setAttribute(String zoneName, Attribute attr, Value value) {
-//        ZMI zmi = pathNameToZMI(new PathName(zoneName));
-//        if (zmi.getSons().size() == 0) {
-//            zmi.getAttributes().addOrChange(attr, value);
-//        }
-//    }
-//
-//    @Override
-//    public void installQuery(String name, String query) {
-//        Attribute attr = new Attribute(name);
-//        ValueString value = new ValueString(query);
-//        _installQuery(root, attr, value);
-//    }
-//
-//    private void _installQuery(ZMI zmi, Attribute attr, ValueString value) {
-//        zmi.getAttributes().addOrChange(attr, value);
-//        for (ZMI son : zmi.getSons()) {
-//            _installQuery(son, attr, value);
-//        }
-//    }
-
-//    @Override
-//    public void uninstallQuery(String name) {
-//        Attribute attr = new Attribute(name);
-//        _uninstallQuery(root, attr);
-//    }
-//
-//    private void _uninstallQuery(ZMI zmi, Attribute attr) {
-//        zmi.getAttributes().remove(attr);
-//        for (ZMI son : zmi.getSons()) {
-//            _uninstallQuery(son, attr);
-//        }
-//    }
-//
     @Override
     public AttributesMap getAttributes(PathName zone) {
-        ZMI zmi = pathNameToZMI(zone);
-        return zmi.getAttributes();
+        synchronized (attributes_lock) {
+            ZMI zmi = pathNameToZMI(zone);
+            return zmi.getAttributes().clone();
+        }
+    }
+
+    @Override
+    public void setAttribute(PathName zone, Attribute attr, Value value) {
+        synchronized (attributes_lock) {
+            ZMI zmi = pathNameToZMI(zone);
+            if (zmi.getSons().size() > 0) return;
+            zmi.getAttributes().addOrChange(attr, value);
+        }
     }
 
     private static ValueContact createContact(String path, byte ip1, byte ip2, byte ip3, byte ip4)
@@ -190,7 +243,6 @@ public class Agent implements AgentApi {
     public static void main(String[] args) throws Exception {
         root = createTestHierarchy();
         fallback_contacts.add(createContact("/uw/violet07", (byte) 10, (byte) 1, (byte) 1, (byte) 10));
-        queries.put(new Attribute("&test"), "SELECT 2 AS x");
 
         if (System.getSecurityManager() == null) {
             System.setSecurityManager(new SecurityManager());
@@ -203,6 +255,8 @@ public class Agent implements AgentApi {
             Registry registry = LocateRegistry.getRegistry();
             registry.rebind(name, stub);
             System.out.println("AgentApi bound");
+            stub.installQuery(new Attribute("&test"), "SELECT 2 AS x");
+
             QueryEvaluator evaluator = new QueryEvaluator(stub, root);
             scheduler.scheduleAtFixedRate(evaluator, 2, 1, TimeUnit.MINUTES);
         } catch (Exception e) {

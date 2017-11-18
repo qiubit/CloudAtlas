@@ -198,10 +198,10 @@ public class ZonesController {
         QueriesList result = new QueriesList();
         try {
             List<QueryRequest> result_list = new ArrayList<>();
-            for (Map.Entry<Attribute, String> entry : rmiClient.getAgentApi().getQueries().entrySet()) {
+            for (Map.Entry<Attribute, QueryInformation> entry : rmiClient.getAgentApi().getQueries().entrySet()) {
                 QueryRequest query_request = new QueryRequest();
                 query_request.setName(entry.getKey().toString());
-                query_request.setQuery(entry.getValue());
+                query_request.setQuery(entry.getValue().getQuery());
                 result_list.add(query_request);
             }
             result.setQueries(result_list);
