@@ -24,77 +24,72 @@
 
 package pl.edu.mimuw.cloudatlas.model;
 
-import java.net.InetAddress;
-
 import pl.edu.mimuw.cloudatlas.model.Value;
-import pl.edu.mimuw.cloudatlas.model.ValueContact;
+import pl.edu.mimuw.cloudatlas.model.ValueBoolean;
+
+import java.io.Serializable;
 
 /**
- * A class that represents a contact to a node. The contact consists of a full path name of this node and its IP
- * address.
- * <p>
- * This class is immutable.
+ * A class that wraps a Java <code>Boolean</code> object.
  */
-public class ValueContact extends Value {
-    private final PathName name;
-    private final InetAddress address;
-
+public class ValueBoolean extends ValueSimple<Boolean> implements Serializable {
     /**
-     * Constructs a new <code>ValueContact</code> with the specified path name and IP address.
+     * Constructs a new <code>ValueBoolean</code> object wrapping the specified <code>value</code>.
      *
-     * @param name    the full path name of a node
-     * @param address the IP address of the node
+     * @param value the value to wrap
      */
-    public ValueContact(PathName name, InetAddress address) {
-        this.name = name;
-        this.address = address;
-    }
-
-    @Override
-    public Value getDefaultValue() {
-        return new ValueContact(null, null);
-    }
-
-    /**
-     * Returns a name stored in this object.
-     *
-     * @return the name of a node
-     */
-    public PathName getName() {
-        return name;
-    }
-
-    /**
-     * Returns an IP address stored in this object.
-     *
-     * @return the IP address of a node
-     */
-    public InetAddress getAddress() {
-        return address;
+    public ValueBoolean(Boolean value) {
+        super(value);
     }
 
     @Override
     public Type getType() {
-        return TypePrimitive.CONTACT;
+        return TypePrimitive.BOOLEAN;
+    }
+
+    @Override
+    public Value getDefaultValue() {
+        return new ValueBoolean(false);
+    }
+
+    @Override
+    public ValueBoolean isLowerThan(Value value) {
+        sameTypesOrThrow(value, Operation.COMPARE);
+        if (isNull() || value.isNull())
+            return new ValueBoolean(null);
+        return new ValueBoolean(!getValue() && ((ValueBoolean) value).getValue());
+    }
+
+    @Override
+    public ValueBoolean and(Value value) {
+        sameTypesOrThrow(value, Operation.AND);
+        if (isNull() || value.isNull())
+            return new ValueBoolean(null);
+        return new ValueBoolean(getValue() && ((ValueBoolean) value).getValue());
+    }
+
+    @Override
+    public ValueBoolean or(Value value) { // -
+        sameTypesOrThrow(value, Operation.OR);
+        if (isNull() || value.isNull())
+            return new ValueBoolean(null);
+        return new ValueBoolean(getValue() || ((ValueBoolean) value).getValue());
+    }
+
+    @Override
+    public ValueBoolean negate() { // !
+        return new ValueBoolean(isNull() ? null : !getValue());
     }
 
     @Override
     public Value convertTo(Type type) {
         switch (type.getPrimaryType()) {
-            case CONTACT:
+            case BOOLEAN:
                 return this;
             case STRING:
-                if (isNull())
-                    return ValueString.NULL_STRING;
-                else
-                    return new ValueString("(" + name.toString() + ", " + address.toString() + ")");
+                return getValue() == null ? ValueString.NULL_STRING : new ValueString(getValue().toString());
             default:
                 throw new UnsupportedConversionException(getType(), type);
         }
-    }
-
-    @Override
-    public boolean isNull() {
-        return name == null || address == null;
     }
 }

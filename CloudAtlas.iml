@@ -26,5 +26,36 @@
       </library>
     </orderEntry>
     <orderEntry type="library" name="redis.clients:jedis:2.9.0" level="project" />
+    <orderEntry type="module-library">
+      <library>
+        <CLASSES>
+          <root url="file://$MODULE_DIR$/lib/spring-framework-5.0.1.RELEASE/libs" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES>
+          <root url="file://$MODULE_DIR$/lib/spring-framework-5.0.1.RELEASE/libs" />
+        </SOURCES>
+        <jarDirectory url="file://$MODULE_DIR$/lib/spring-framework-5.0.1.RELEASE/libs" recursive="false" />
+        <jarDirectory url="file://$MODULE_DIR$/lib/spring-framework-5.0.1.RELEASE/libs" recursive="false" type="SOURCES" />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" exported="">
+      <library>
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/lib/spring-boot-1.5.8.RELEASE.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library" exported="">
+      <library>
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/lib/spring-boot-autoconfigure-1.5.8.RELEASE.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
   </component>
 </module>

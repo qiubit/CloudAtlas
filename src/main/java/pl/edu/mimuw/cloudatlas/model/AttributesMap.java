@@ -24,6 +24,7 @@
 
 package pl.edu.mimuw.cloudatlas.model;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -32,8 +33,8 @@ import java.util.Map.Entry;
 /**
  * Represents a map from <code>Attribute</code> to <code>Value</code>. It cannot contain duplicate keys.
  */
-public class AttributesMap implements Iterable<Entry<Attribute, Value>>, Cloneable {
-    private Map<Attribute, Value> map = new HashMap<Attribute, Value>();
+public class AttributesMap implements Iterable<Entry<Attribute, Value>>, Cloneable, Serializable {
+    private HashMap<Attribute, Value> map = new HashMap<Attribute, Value>();
 
     private void checkNulls(Attribute attribute, Value value) {
         if (attribute == null)

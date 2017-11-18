@@ -27,13 +27,15 @@ package pl.edu.mimuw.cloudatlas.model;
 import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueNull;
 
+import java.io.Serializable;
+
 /**
  * A special null value of an unknown type introduced to deal with nulls. This class is a singleton.
  *
  * @see TypePrimitve#NULL
  * @see Type#isCompatible(Value)
  */
-public class ValueNull extends Value {
+public class ValueNull extends Value implements Serializable {
     private static ValueNull instance = null;
 
     private ValueNull() {
