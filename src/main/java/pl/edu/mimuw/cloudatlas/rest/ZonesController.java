@@ -172,6 +172,7 @@ public class ZonesController {
 
     RmiClient rmiClient = new RmiClient("localhost", "AgentApi");
 
+    @CrossOrigin(origins = "*")
     @RequestMapping(value="/install_query",  method= RequestMethod.POST)
     public ResponseEntity<String> installQuery(@RequestBody QueryRequest queryRequest) {
         try {
@@ -183,7 +184,7 @@ public class ZonesController {
         return ResponseEntity.ok("ok");
     }
 
-
+    @CrossOrigin(origins = "*")
     @RequestMapping(value="/uninstall_query",  method= RequestMethod.POST)
     public ResponseEntity<String> uninstallQuery(@RequestBody QueryRequest queryRequest) {
         try {
@@ -195,6 +196,7 @@ public class ZonesController {
         return ResponseEntity.ok("ok");
     }
 
+    @CrossOrigin(origins = "*")
     @RequestMapping(value="/get_queries")
     public ResponseEntity<QueriesList> getQueries() {
         QueriesList result = new QueriesList();
@@ -214,7 +216,7 @@ public class ZonesController {
         return ResponseEntity.ok(result);
     }
 
-
+    @CrossOrigin(origins = "*")
     @RequestMapping(value="/set_fallback",  method= RequestMethod.POST)
     public ResponseEntity<String> setFallback(@RequestBody FallbackContactsRequest fallbackRequest) {
         try {
@@ -229,6 +231,7 @@ public class ZonesController {
         return ResponseEntity.ok("ok");
     }
 
+    @CrossOrigin(origins = "*")
     @RequestMapping(value="/get_fallback")
     public ResponseEntity<FallbackContactsRequest> getFallback() {
         FallbackContactsRequest result = new FallbackContactsRequest();
@@ -249,6 +252,7 @@ public class ZonesController {
         return ResponseEntity.ok(result);
     }
 
+    @CrossOrigin(origins = "*")
     @RequestMapping(value="/get_attributes",  method= RequestMethod.POST)
     public ResponseEntity<AttributeListResponse> getAttributes(@RequestBody ZoneRequest zoneRequest) {
         AttributeListResponse result = new AttributeListResponse();
@@ -270,6 +274,7 @@ public class ZonesController {
         return ResponseEntity.ok(result);
     }
 
+    @CrossOrigin(origins = "*")
     @RequestMapping("/zones")
     public ResponseEntity<ZoneList> zones() {
         ZoneList result = new ZoneList();
