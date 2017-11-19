@@ -55,8 +55,8 @@ class AgentMenu extends Component {
       <Segment>
         <Header onClick={this.handleAgentNameClick} as='h1'><a>Agent {this.props.agent}</a></Header>
         {(this.state.currentPage === this.PageEnum.MENU) && <MainMenu />}
-        {(this.state.currentPage === this.PageEnum.STRUCTURE) && (<Structure />)}
-        {(this.state.currentPage === this.PageEnum.QUERIES) && (<Queries />)}
+        {(this.state.currentPage === this.PageEnum.STRUCTURE) && (<Structure agentAddress={this.props.agent} />)}
+        {(this.state.currentPage === this.PageEnum.QUERIES) && (<Queries agentAddress={this.props.agent} />)}
         {(this.state.currentPage === this.PageEnum.CONTACTS) && (<Contacts agentAddress={this.props.agent} />)}
       </Segment>
     );
