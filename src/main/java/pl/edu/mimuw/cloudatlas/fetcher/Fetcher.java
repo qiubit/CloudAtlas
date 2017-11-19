@@ -67,6 +67,7 @@ public class Fetcher {
             Jedis redisClient = new Jedis("localhost");
             scheduler.scheduleAtFixedRate(new RedisFetcher(agentApi, redisClient, new PathName("/uw/violet07")), 10, 10, TimeUnit.SECONDS);
         } catch (Exception e) {
+            e.printStackTrace();
             System.err.println("RMI agentapi problem");
         }
 

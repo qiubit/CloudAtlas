@@ -158,12 +158,14 @@ class RmiClient {
                 Registry registry = LocateRegistry.getRegistry(this.host);
                 this.agentApi = (AgentApi) registry.lookup(this.serviceName);
             } catch (Exception e) {
+                e.printStackTrace();
                 System.err.println("RMI agentapi problem");
             }
         }
         return agentApi;
     }
 }
+
 
 @RestController
 public class ZonesController {
