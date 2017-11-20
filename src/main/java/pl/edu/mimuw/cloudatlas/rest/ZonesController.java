@@ -14,6 +14,9 @@ import pl.edu.mimuw.cloudatlas.agent.AgentApi;
 import org.springframework.web.bind.annotation.*;
 import pl.edu.mimuw.cloudatlas.model.*;
 
+import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
+
 
 class AttributeResponse {
     private String name;
@@ -50,7 +53,10 @@ class AttributeListResponse {
 
 class QueryRequest {
     private String query;
+
+    @NotNull
     private String name;
+
     public String getQuery() {
         return this.query;
     }
@@ -82,6 +88,8 @@ class QueriesList {
 
 
 class ZoneRequest {
+
+    @NotNull
     private String zoneName;
 
     public String getZoneName() {
@@ -115,6 +123,7 @@ class Contact {
 }
 
 class FallbackContactsRequest {
+    @NotNull
     private List<Contact> contacts;
 
     public List<Contact> getContacts() {
@@ -174,7 +183,7 @@ public class ZonesController {
 
     @CrossOrigin(origins = "*")
     @RequestMapping(value="/install_query",  method= RequestMethod.POST)
-    public ResponseEntity<String> installQuery(@RequestBody QueryRequest queryRequest) {
+    public ResponseEntity<String> installQuery(@RequestBody @Valid QueryRequest queryRequest) {
         try {
             rmiClient.getAgentApi().installQuery(new Attribute(queryRequest.getName()), queryRequest.getQuery());
         } catch (Exception e) {
@@ -186,7 +195,7 @@ public class ZonesController {
 
     @CrossOrigin(origins = "*")
     @RequestMapping(value="/uninstall_query",  method= RequestMethod.POST)
-    public ResponseEntity<String> uninstallQuery(@RequestBody QueryRequest queryRequest) {
+    public ResponseEntity<String> uninstallQuery(@RequestBody @Valid QueryRequest queryRequest) {
         try {
             rmiClient.getAgentApi().uninstallQuery(new Attribute(queryRequest.getName()));
         } catch (Exception e) {
@@ -218,7 +227,7 @@ public class ZonesController {
 
     @CrossOrigin(origins = "*")
     @RequestMapping(value="/set_fallback",  method= RequestMethod.POST)
-    public ResponseEntity<String> setFallback(@RequestBody FallbackContactsRequest fallbackRequest) {
+    public ResponseEntity<String> setFallback(@RequestBody @Valid FallbackContactsRequest fallbackRequest) {
         try {
             rmiClient.getAgentApi().setFallbackContacts(new ArrayList<>(
                     fallbackRequest.getContacts().stream().map(
@@ -254,10 +263,9 @@ public class ZonesController {
 
     @CrossOrigin(origins = "*")
     @RequestMapping(value="/get_attributes",  method= RequestMethod.POST)
-    public ResponseEntity<AttributeListResponse> getAttributes(@RequestBody ZoneRequest zoneRequest) {
+    public ResponseEntity<AttributeListResponse> getAttributes(@RequestBody @Valid ZoneRequest zoneRequest) {
         AttributeListResponse result = new AttributeListResponse();
         try {
-
             AttributesMap attributes = rmiClient.getAgentApi().getAttributes(new PathName(zoneRequest.getZoneName()));
             List<AttributeResponse> result_list = new ArrayList<>();
             for (Map.Entry<Attribute, Value> entry : attributes) {
