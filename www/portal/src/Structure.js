@@ -15,14 +15,25 @@ class StructureTree extends Component {
                 <Header as='h3'>{zoneObj.zone}</Header>
                 {
                   zoneObj.attributes.map(
-                    (attr, idx) => (
-                      <p
-                        style={{ color: 'darkblue', textDecoration: 'underline' }}
-                        onClick={() => { this.props.activeChartChangeCb(zoneObj.zone, attr) }}
-                        key={idx}>
-                        {attr.name + ": " + attr.value}
-                      </p>
-                    )
+                    (attr, idx) => {
+                      if (!isNaN(attr.value)) {
+                        return (
+                          <p
+                            style={{ color: 'darkblue', textDecoration: 'underline' }}
+                            onClick={() => { this.props.activeChartChangeCb(zoneObj.zone, attr) }}
+                            key={idx}>
+                            {attr.name + ": " + attr.value}
+                          </p>
+                        );
+                      } else {
+                        return (
+                          <p
+                            key={idx}>
+                            {attr.name + ": " + attr.value}
+                          </p>
+                        );
+                      }
+                    }
                   )
                 }
               </Segment>
@@ -113,7 +124,7 @@ class Structure extends Component {
       method: 'post',
       url: this.props.agentAddress + "/get_attributes",
       data: {
-        'zone': zone,
+        'zoneName': zone,
       },
       headers: {'Content-Type': 'application/json'},
     }).then(res => {
