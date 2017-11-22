@@ -1,3 +1,18 @@
+### Agent
+
+To run agent you need to install and run Redis: https://redis.io/topics/
+However, Redis is not needed for compiling and running Interpreter.
+
+To compile Agent, do:
+```sh
+$ mvn install
+```
+
+To run Agent, do:
+```sh
+$ ./start_agent.sh
+```
+
 ### Interpreter
 
 After compiling agent (instructions above), execute `./start_interpreter.sh` to  run interpreter.
