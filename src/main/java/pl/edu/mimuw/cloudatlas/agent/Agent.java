@@ -265,7 +265,7 @@ public class Agent implements AgentApi {
         }
     }
 
-    private static ZMI createTestHierarchy() throws ParseException, UnknownHostException {
+    public static ZMI createTestHierarchy() throws ParseException, UnknownHostException {
         ValueContact violet07Contact = createContact("/uw/violet07", (byte) 10, (byte) 1, (byte) 1, (byte) 10);
         ValueContact khaki13Contact = createContact("/uw/khaki13", (byte) 10, (byte) 1, (byte) 1, (byte) 38);
         ValueContact khaki31Contact = createContact("/uw/khaki31", (byte) 10, (byte) 1, (byte) 1, (byte) 39);
