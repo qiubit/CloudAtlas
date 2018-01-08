@@ -9,12 +9,25 @@ from threading import Thread
 
 import psutil
 import subprocess
-import redis
+import pika
 import configparser
 import sys
+import json
 
 
 EXITING = False
+FETCHER_QUEUE = 'fetcher'
+
+MEASUREMENTS_TOPIC = 'measurements'
+
+
+def publishMsg(rabbitMqChannel, topic, key, val, tstamp):
+    rabbitMqChannel.basic_publish(
+        exchange='',
+        routing_key=FETCHER_QUEUE,
+        body=json.dumps({ "topic": topic, "name": key, "value": val, "timestamp": tstamp }),
+        properties=pika.spec.BasicProperties(content_type="application/json"),
+    )
 
 
 class LinkedListNode(object):
@@ -135,8 +148,11 @@ class AttributeFetcher(object):
     def fetch_attribute_value(self):
         pass
 
-    def get_worker(self, redisDb):
+    def get_worker(self):
         fetcher = self
+        connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+        rabbitMqChannel = connection.channel()
+        rabbitMqChannel.queue_declare(queue=FETCHER_QUEUE)
         class worker(Thread):
             def run(self):
                 time_total = 0
@@ -155,9 +171,12 @@ class AttributeFetcher(object):
                             attr.get_value_str()
                         )
                     )
-                    redisDb.lpush(
+                    publishMsg(
+                        rabbitMqChannel,
+                        MEASUREMENTS_TOPIC,
                         attr.get_name(),
-                        '{0:f}:{1:s}'.format(attr.get_timestamp(), attr.get_value_str())
+                        attr.get_value_str(),
+                        attr.get_timestamp(),
                     )
         return worker()
 
@@ -204,8 +223,11 @@ class NumericAttributeFetcher(AttributeFetcher):
             cur_node = cur_node.next
         return AttributeValue(time.time(), 'avg', total / list_size)
 
-    def get_worker(self, redisDb):
+    def get_worker(self):
         fetcher = self
+        connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+        rabbitMqChannel = connection.channel()
+        rabbitMqChannel.queue_declare(queue=FETCHER_QUEUE)
         class worker(Thread):
             def run(self):
                 time_total = 0
@@ -224,9 +246,12 @@ class NumericAttributeFetcher(AttributeFetcher):
                             attr.get_value_str()
                         )
                     )
-                    redisDb.lpush(
+                    publishMsg(
+                        rabbitMqChannel,
+                        MEASUREMENTS_TOPIC,
                         attr.get_name(),
-                        '{0:f}:{1:s}'.format(attr.get_timestamp(), attr.get_value_str())
+                        attr.get_value_str(),
+                        attr.get_timestamp(),
                     )
                     fetcher.clear_average_window()
                     if fetcher.average_window.get_head():
@@ -245,9 +270,12 @@ class NumericAttributeFetcher(AttributeFetcher):
                                     average_attr.get_value_str()
                                 )
                             )
-                            redisDb.lpush(
+                            publishMsg(
+                                rabbitMqChannel,
+                                MEASUREMENTS_TOPIC,
                                 attr.get_name() + '_avg',
-                                '{0:f}:{1:s}'.format(attr.get_timestamp(), attr.get_value_str())
+                                average_attr.get_value_str(),
+                                average_attr.get_timestamp(),
                             )
                             fetcher.average_window.clear()
         return worker()
@@ -332,11 +360,6 @@ class NumProcessesFetcher(NumericAttributeFetcher):
         avg_attr.name = 'num_processes'
         return avg_attr
 
-    def get_average(self):
-        avg_attr = NumericAttributeFetcher.get_average(self)
-        avg_attr.name = 'num_cores'
-        return avg_attr
-
 
 class UsersFetcher(NumericAttributeFetcher):
     def fetch_attribute_value(self):
@@ -373,19 +396,20 @@ if __name__ == '__main__':
     check_config_dict('averaging_period', config)
     collect_interval = int(config['collect_interval'])
     averaging_period = int(config['averaging_period'])
-    r = redis.Redis(host='localhost', port=6379, db=0)
-    r.set('collect_interval', collect_interval)
-    r.set('averaging_period', averaging_period)
+
+    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+    channel = connection.channel()
+    channel.queue_declare(queue=FETCHER_QUEUE)
     numFetchers = [UsersFetcher, CPUFetcher, FreeDiskFetcher, TotalDiskFetcher, FreeRAMFetcher, TotalRAMFetcher, FreeSwapFetcher, TotalSwapFetcher, NumProcessesFetcher]
     otherFetchers = [KernelVerFetcher, NumCoresFetcher]
     numFetcherObjs = []
     otherFetcherObjs = []
     for fetcher_class in numFetchers:
         f = fetcher_class(collect_interval, averaging_period)
-        f.get_worker(r).start()
+        f.get_worker().start()
     for fetcher_class in otherFetchers:
         f = fetcher_class(collect_interval)
-        f.get_worker(r).start()
+        f.get_worker().start()
     while True:
         try:
             time.sleep(1)

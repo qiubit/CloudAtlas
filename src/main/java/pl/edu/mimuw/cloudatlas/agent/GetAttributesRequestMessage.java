@@ -4,7 +4,7 @@ import pl.edu.mimuw.cloudatlas.model.PathName;
 
 import java.io.Serializable;
 
-public class GetAttributesRequestMessage extends Message implements Serializable {
+public class GetAttributesRequestMessage extends SerializedMessage implements Serializable {
 
     public final PathName zonePath;
 

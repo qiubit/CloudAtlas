@@ -4,7 +4,7 @@ import pl.edu.mimuw.cloudatlas.model.AttributesMap;
 
 import java.io.Serializable;
 
-public class GetAttributesResponseMessage extends Message implements Serializable {
+public class GetAttributesResponseMessage extends SerializedMessage implements Serializable {
     public final AttributesMap attributesMap;
 
     public GetAttributesResponseMessage(AttributesMap attributesMap) {

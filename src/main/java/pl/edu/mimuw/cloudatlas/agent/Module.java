@@ -1,12 +1,16 @@
 package pl.edu.mimuw.cloudatlas.agent;
 
 import com.rabbitmq.client.*;
+import org.json.simple.JSONObject;
 
 import java.io.*;
 
 public abstract class Module implements MessageHandler {
 
     private final String moduleID;
+
+    public static final String JSON_TYPE = "application/json";
+    public static final String SERIALIZED_TYPE = "application/java-serialized-object";
 
     private Connection connection;
     private Channel myChannel;
@@ -27,6 +31,11 @@ public abstract class Module implements MessageHandler {
         return handleMessage((Message) msg);
     }
 
+    @Override
+    public Message handleMessage(FetcherMeasurementsMessage msg) {
+        return handleMessage((Message) msg);
+    }
+
     private Message visitMessage(Message msg) {
         return msg.handle(this);
     }
@@ -43,12 +52,28 @@ public abstract class Module implements MessageHandler {
             public void handleDelivery(String consumerTag, Envelope envelope,
                                        AMQP.BasicProperties properties, byte[] body) throws IOException {
                 try {
-                    Message message = Message.fromBytes(body);
+                    Message message;
+                    String contentType = properties.getContentType();
+
+                    if (contentType == null) {
+                        throw new IOException("Message without content_type property received");
+                    }
+
+                    if (contentType.equals(JSON_TYPE)) {
+                        message = JsonMessage.fromBytes(body);
+                    } else if (contentType.equals(SERIALIZED_TYPE)) {
+                        message = SerializedMessage.fromBytes(body);
+                    } else {
+                        throw new IOException("Unexpected msg contentType: " + contentType);
+                    }
+
                     Message response = visitMessage(message);
+                    // TODO: Allow JSON response?
                     if (response != null) {
                         AMQP.BasicProperties replyProps = new AMQP.BasicProperties
                                 .Builder()
                                 .correlationId(properties.getCorrelationId())
+                                .contentType(Module.SERIALIZED_TYPE)
                                 .build();
 
                         myChannel.basicPublish("", properties.getReplyTo(), replyProps, response.toBytes());
@@ -61,11 +86,13 @@ public abstract class Module implements MessageHandler {
         myChannel.basicConsume(moduleID, true, consumer);
     }
 
-    protected void sendMsg(String recieverModuleID, String msgID, Message msg) throws java.io.IOException {
+    protected void sendMsg(String recieverModuleID, String msgID, Message msg, String msgContentType)
+            throws java.io.IOException {
         AMQP.BasicProperties props = new AMQP.BasicProperties
                 .Builder()
                 .correlationId(msgID)
                 .replyTo(moduleID)
+                .contentType(msgContentType)
                 .build();
         myChannel.basicPublish("", recieverModuleID, props, msg.toBytes());
     }
