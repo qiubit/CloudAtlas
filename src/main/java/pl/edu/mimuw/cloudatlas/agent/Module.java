@@ -36,6 +36,11 @@ public abstract class Module implements MessageHandler {
         return handleMessage((Message) msg);
     }
 
+    @Override
+    public Message handleMessage(SetAttributeMessage msg) {
+        return handleMessage((Message) msg);
+    }
+
     private Message visitMessage(Message msg) {
         return msg.handle(this);
     }
@@ -76,7 +81,12 @@ public abstract class Module implements MessageHandler {
                                 .contentType(Module.SERIALIZED_TYPE)
                                 .build();
 
-                        myChannel.basicPublish("", properties.getReplyTo(), replyProps, response.toBytes());
+                        String replyTo;
+                        if (response.getReceiverQueueName() != null)
+                            replyTo = response.getReceiverQueueName();
+                        else
+                            replyTo = properties.getReplyTo();
+                        myChannel.basicPublish("", replyTo, replyProps, response.toBytes());
                     }
                 } catch (ClassNotFoundException e) {
                     System.out.println("Got Invalid msg");

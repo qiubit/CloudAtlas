@@ -26,7 +26,7 @@ public class TestModule extends Module {
         TestModule testModule = new TestModule();
         ZMIHolderModule zmiHolderModule = new ZMIHolderModule(createTestHierarchy());
         FetcherModule fetcherModule = new FetcherModule();
-        testModule.test();
+        // testModule.test();
     }
 
     public void test() throws Exception {

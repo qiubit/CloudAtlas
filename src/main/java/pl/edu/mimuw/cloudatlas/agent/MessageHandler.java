@@ -5,4 +5,5 @@ public interface MessageHandler {
     Message handleMessage(GetAttributesRequestMessage msg);
     Message handleMessage(GetAttributesResponseMessage msg);
     Message handleMessage(FetcherMeasurementsMessage msg);
+    Message handleMessage(SetAttributeMessage msg);
 }

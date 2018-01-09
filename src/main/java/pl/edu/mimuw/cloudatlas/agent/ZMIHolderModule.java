@@ -16,12 +16,20 @@ public class ZMIHolderModule extends Module implements MessageHandler {
     public ZMIHolderModule(ZMI root) throws Exception {
         super(moduleID);
         this.root = root;
+        System.out.println("ZMIHolder: starting");
     }
 
     @Override
     public Message handleMessage(GetAttributesRequestMessage msg) {
         ZMI zmi = pathNameToZMI(msg.zonePath);
         return new GetAttributesResponseMessage(zmi.getAttributes().clone());
+    }
+
+    @Override
+    public Message handleMessage(SetAttributeMessage msg) {
+        System.out.println("ZMIHolder: got SetAttributeMessage - " + msg.getAttribute().getName());
+        System.out.println("ZMIHolder: TODO - ZMI modification");
+        return null;
     }
 
     private static ZMI pathNameToZMI(PathName path) {
