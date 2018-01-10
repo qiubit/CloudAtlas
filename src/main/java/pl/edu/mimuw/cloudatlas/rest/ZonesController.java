@@ -1,17 +1,25 @@
 package pl.edu.mimuw.cloudatlas.rest;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import com.rabbitmq.client.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import pl.edu.mimuw.cloudatlas.agent.AgentApi;
+import pl.edu.mimuw.cloudatlas.agent.*;
 import org.springframework.web.bind.annotation.*;
+import pl.edu.mimuw.cloudatlas.agent.message.*;
+import pl.edu.mimuw.cloudatlas.agent.module.ZMIHolderModule;
 import pl.edu.mimuw.cloudatlas.model.*;
 
 import javax.validation.Valid;
@@ -175,11 +183,102 @@ class RmiClient {
     }
 }
 
+class RabbitClient {
+    public static final String queueName = "ApiQueue";
+    private String host;
+    private ConnectionFactory connectionFactory;
+    private Connection connection;
+    private Channel channel;
+
+    private final Object request_lock = new Object(); // sorry
+
+    RabbitClient(String host) {
+        this.host = host;
+        connectionFactory = new ConnectionFactory();
+        connectionFactory.setHost(host);
+        channel = getChannel();
+    }
+
+    private Channel getChannel() {
+        Channel channel = null;
+        if (this.connection == null || !this.connection.isOpen()) {
+            try {
+                connection = connectionFactory.newConnection();
+                channel = connection.createChannel();
+                channel.queueDeclare(queueName, false, false, false, null);
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.err.println("RabbitMQ problem");
+            }
+        }
+        return channel;
+    }
+
+    private Message getResponse(Message request) throws Exception {
+        synchronized (request_lock) {
+            String corrId = UUID.randomUUID().toString();
+            AMQP.BasicProperties props = new AMQP.BasicProperties
+                    .Builder()
+                    .correlationId(corrId)
+                    .replyTo(queueName)
+                    .build();
+
+            final BlockingQueue<Message> response_queue = new ArrayBlockingQueue<>(1);
+            String tag = channel.basicConsume(queueName, true, new DefaultConsumer(channel) {
+                @Override
+                public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+                    if (properties.getCorrelationId().equals(corrId)) {
+                        Message response = null;
+                        try {
+                            response = Message.fromBytes(body);
+                            System.out.println("got response");
+                        } catch (ClassNotFoundException e) {
+                            System.out.println("Class not found exception");
+                        }
+                        response_queue.offer(response);
+                    }
+                }
+            });
+            channel.basicPublish("", ZMIHolderModule.moduleID, props, request.toBytes());
+            Message result = response_queue.poll(2, TimeUnit.SECONDS);
+            channel.basicCancel(tag);
+            return result;
+        }
+    }
+
+    public AttributesMap getAttributes(String zoneName) throws Exception {
+        Message msg = new GetAttributesRequestMessage(new PathName(zoneName));
+        GetAttributesResponseMessage response = (GetAttributesResponseMessage) getResponse(msg);
+        return response.attributesMap;
+    }
+
+    public List<PathName> getAvailableZones() throws Exception {
+        Message msg = new GetAvailableZonesRequestMessage();
+        GetAvailableZonesResponseMessage response = (GetAvailableZonesResponseMessage) getResponse(msg);
+        return response.availableZones;
+    }
+
+    public List<ValueContact> getFallbackContacts() throws Exception {
+        Message msg = new GetFallbackContactsRequestMessage();
+        GetFallbackContactsResponseMessage response = (GetFallbackContactsResponseMessage) getResponse(msg);
+        return response.fallbackContacts;
+    }
+
+    public boolean setFallbackContacts(ArrayList<ValueContact> fallbackConstacts) throws Exception {
+        Message msg = new SetFallbackRequestMessage(fallbackConstacts);
+        StatusResponseMessage response = (StatusResponseMessage) getResponse(msg);
+        return response.status;
+    }
+
+}
+
 
 @RestController
 public class ZonesController {
 
     RmiClient rmiClient = new RmiClient("localhost", "AgentApi");
+    RabbitClient rabbitClient = new RabbitClient("localhost");
+
 
     @CrossOrigin(origins = "*")
     @RequestMapping(value="/install_query",  method= RequestMethod.POST)
@@ -229,10 +328,13 @@ public class ZonesController {
     @RequestMapping(value="/set_fallback",  method= RequestMethod.POST)
     public ResponseEntity<String> setFallback(@RequestBody @Valid FallbackContactsRequest fallbackRequest) {
         try {
-            rmiClient.getAgentApi().setFallbackContacts(new ArrayList<>(
-                    fallbackRequest.getContacts().stream().map(
-                            elem -> new ValueContact(new PathName(elem.getName()), elem.getAddress())
-                    ).collect(Collectors.toList())));
+            boolean result = rabbitClient.setFallbackContacts(new ArrayList<>(
+                                fallbackRequest.getContacts().stream().map(
+                                    elem -> new ValueContact(new PathName(elem.getName()), elem.getAddress())
+                                ).collect(Collectors.toList())));
+            if (!result) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            }
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
@@ -245,7 +347,7 @@ public class ZonesController {
     public ResponseEntity<FallbackContactsRequest> getFallback() {
         FallbackContactsRequest result = new FallbackContactsRequest();
         try {
-            List<ValueContact> contacts = rmiClient.getAgentApi().getFallbackContacts();
+            List<ValueContact> contacts = rabbitClient.getFallbackContacts();
             List<Contact> result_contacts = new ArrayList<>();
             for (ValueContact contact : contacts) {
                 Contact result_contact = new Contact();
@@ -266,7 +368,7 @@ public class ZonesController {
     public ResponseEntity<AttributeListResponse> getAttributes(@RequestBody @Valid ZoneRequest zoneRequest) {
         AttributeListResponse result = new AttributeListResponse();
         try {
-            AttributesMap attributes = rmiClient.getAgentApi().getAttributes(new PathName(zoneRequest.getZoneName()));
+            AttributesMap attributes = rabbitClient.getAttributes(zoneRequest.getZoneName());
             List<AttributeResponse> result_list = new ArrayList<>();
             for (Map.Entry<Attribute, Value> entry : attributes) {
                 AttributeResponse attribute_response = new AttributeResponse();
@@ -287,7 +389,7 @@ public class ZonesController {
     public ResponseEntity<ZoneList> zones() {
         ZoneList result = new ZoneList();
         try {
-            result.setZones(rmiClient.getAgentApi().getAvailableZones().stream().map(elem -> elem.toString()).collect(Collectors.toList()));
+            result.setZones(rabbitClient.getAvailableZones().stream().map(elem -> elem.toString()).collect(Collectors.toList()));
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);

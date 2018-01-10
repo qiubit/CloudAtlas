@@ -1,4 +1,4 @@
-package pl.edu.mimuw.cloudatlas.agent;
+package pl.edu.mimuw.cloudatlas.agent.message;
 
 import pl.edu.mimuw.cloudatlas.model.PathName;
 
@@ -14,7 +14,6 @@ public class GetAttributesRequestMessage extends Message implements Serializable
 
     @Override
     public Message handle(MessageHandler m) {
-        System.out.println("siemanko");
         return m.handleMessage(this);
     }
 }
