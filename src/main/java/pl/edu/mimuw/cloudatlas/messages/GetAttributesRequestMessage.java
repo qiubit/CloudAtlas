@@ -1,4 +1,4 @@
-package pl.edu.mimuw.cloudatlas.agent;
+package pl.edu.mimuw.cloudatlas.messages;
 
 import pl.edu.mimuw.cloudatlas.model.PathName;
 

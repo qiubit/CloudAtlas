@@ -1,10 +1,13 @@
-package pl.edu.mimuw.cloudatlas.agent;
+package pl.edu.mimuw.cloudatlas.modules;
 
 
+import pl.edu.mimuw.cloudatlas.messages.FetcherMeasurementsMessage;
+import pl.edu.mimuw.cloudatlas.messages.Message;
+import pl.edu.mimuw.cloudatlas.messages.MessageHandler;
+import pl.edu.mimuw.cloudatlas.messages.SetAttributeMessage;
 import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.Value;
 import pl.edu.mimuw.cloudatlas.model.ValueString;
-import pl.edu.mimuw.cloudatlas.model.Type;
 
 
 public class FetcherModule extends Module implements MessageHandler {

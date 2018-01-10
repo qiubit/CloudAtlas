@@ -1,7 +1,11 @@
-package pl.edu.mimuw.cloudatlas.agent;
+package pl.edu.mimuw.cloudatlas.modules;
 
 
 import org.json.simple.JSONObject;
+import pl.edu.mimuw.cloudatlas.messages.FetcherMeasurementsMessage;
+import pl.edu.mimuw.cloudatlas.messages.GetAttributesRequestMessage;
+import pl.edu.mimuw.cloudatlas.messages.GetAttributesResponseMessage;
+import pl.edu.mimuw.cloudatlas.messages.Message;
 import pl.edu.mimuw.cloudatlas.model.PathName;
 
 import static pl.edu.mimuw.cloudatlas.agent.Agent.*;

@@ -1,4 +1,4 @@
-package pl.edu.mimuw.cloudatlas.agent;
+package pl.edu.mimuw.cloudatlas.messages;
 
 import org.json.simple.JSONObject;
 import pl.edu.mimuw.cloudatlas.model.Type;
@@ -37,7 +37,7 @@ public class FetcherMeasurementsMessage extends JsonMessage {
         measurementToType.put("free_ram_avg", TypePrimitive.DOUBLE);
     }
 
-    FetcherMeasurementsMessage(JSONObject obj) {
+    public FetcherMeasurementsMessage(JSONObject obj) {
         super(obj);
 
         this.measurementTimestamp = obj.get("timestamp").toString();

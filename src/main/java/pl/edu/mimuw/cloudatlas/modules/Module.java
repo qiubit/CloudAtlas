@@ -1,7 +1,7 @@
-package pl.edu.mimuw.cloudatlas.agent;
+package pl.edu.mimuw.cloudatlas.modules;
 
 import com.rabbitmq.client.*;
-import org.json.simple.JSONObject;
+import pl.edu.mimuw.cloudatlas.messages.*;
 
 import java.io.*;
 
@@ -22,6 +22,46 @@ public abstract class Module implements MessageHandler {
     }
 
     @Override
+    public Message handleMessage(GetFallbackContactsRequestMessage msg) {
+        return handleMessage((Message) msg);
+    }
+
+    @Override
+    public Message handleMessage(GetFallbackContactsResponseMessage msg) {
+        return handleMessage((Message) msg);
+    }
+
+    @Override
+    public Message handleMessage(GetQueriesRequestMessage msg) {
+        return handleMessage((Message) msg);
+    }
+
+    @Override
+    public Message handleMessage(GetQueriesResponseMessage msg) {
+        return handleMessage((Message) msg);
+    }
+
+    @Override
+    public Message handleMessage(GetZonesRequestMessage msg) {
+        return handleMessage((Message) msg);
+    }
+
+    @Override
+    public Message handleMessage(GetZonesResponseMessage msg) {
+        return handleMessage((Message) msg);
+    }
+
+    @Override
+    public Message handleMessage(InstallQueryMessage msg) {
+        return handleMessage((Message) msg);
+    }
+
+    @Override
+    public Message handleMessage(UninstallQueryMessage msg) {
+        return handleMessage((Message) msg);
+    }
+
+    @Override
     public Message handleMessage(GetAttributesRequestMessage msg) {
         return handleMessage((Message) msg);
     }
@@ -32,12 +72,17 @@ public abstract class Module implements MessageHandler {
     }
 
     @Override
-    public Message handleMessage(FetcherMeasurementsMessage msg) {
+    public Message handleMessage(SetFallbackContactsMessage msg) {
         return handleMessage((Message) msg);
     }
 
     @Override
     public Message handleMessage(SetAttributeMessage msg) {
+        return handleMessage((Message) msg);
+    }
+
+    @Override
+    public Message handleMessage(FetcherMeasurementsMessage msg) {
         return handleMessage((Message) msg);
     }
 

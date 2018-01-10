@@ -1,4 +1,4 @@
-package pl.edu.mimuw.cloudatlas.agent;
+package pl.edu.mimuw.cloudatlas.messages;
 
 import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.Value;
@@ -9,7 +9,7 @@ public class SetAttributeMessage extends SerializedMessage implements Serializab
     private Attribute attribute;
     private Value value;
 
-    SetAttributeMessage(Attribute attribute, Value value) {
+    public SetAttributeMessage(Attribute attribute, Value value) {
         this.attribute = attribute;
         this.value = value;
     }

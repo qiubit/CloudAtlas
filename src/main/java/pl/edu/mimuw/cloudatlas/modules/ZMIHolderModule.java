@@ -1,5 +1,7 @@
-package pl.edu.mimuw.cloudatlas.agent;
+package pl.edu.mimuw.cloudatlas.modules;
 
+import pl.edu.mimuw.cloudatlas.agent.AgentApi;
+import pl.edu.mimuw.cloudatlas.messages.*;
 import pl.edu.mimuw.cloudatlas.model.PathName;
 import pl.edu.mimuw.cloudatlas.model.ValueString;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
