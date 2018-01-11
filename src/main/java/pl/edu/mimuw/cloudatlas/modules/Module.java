@@ -86,6 +86,16 @@ public abstract class Module implements MessageHandler {
         return handleMessage((Message) msg);
     }
 
+    @Override
+    public Message handleMessage(ScheduledMessage msg) {
+        return handleMessage((Message) msg);
+    }
+
+    @Override
+    public Message handleMessage(ExecuteQueriesMessage msg) {
+        return handleMessage((Message) msg);
+    }
+
     private Message visitMessage(Message msg) {
         return msg.handle(this);
     }
@@ -146,7 +156,7 @@ public abstract class Module implements MessageHandler {
         AMQP.BasicProperties props = new AMQP.BasicProperties
                 .Builder()
                 .correlationId(msgID)
-                .replyTo(moduleID)
+                .replyTo(recieverModuleID)
                 .contentType(msgContentType)
                 .build();
         myChannel.basicPublish("", recieverModuleID, props, msg.toBytes());

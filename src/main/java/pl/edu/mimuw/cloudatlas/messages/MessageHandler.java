@@ -16,6 +16,10 @@ public interface MessageHandler {
     Message handleMessage(UninstallQueryMessage msg);
     Message handleMessage(SetFallbackContactsMessage msg);
     Message handleMessage(SetAttributeMessage msg);
+    Message handleMessage(ExecuteQueriesMessage msg);
+
+    // Timer
+    Message handleMessage(ScheduledMessage msg);
 
     // Fetcher communication messages (JSON)
     Message handleMessage(FetcherMeasurementsMessage msg);

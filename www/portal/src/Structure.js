@@ -93,7 +93,7 @@ class Structure extends Component {
 
   componentDidMount() {
     this.zoneFetcher();
-    this.dataFetcher = setInterval(() => { this.zoneFetcher() }, 10000);
+    this.dataFetcher = setInterval(() => { this.zoneFetcher() }, 5000);
   }
 
   componentWillUnmount() {

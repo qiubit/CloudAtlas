@@ -14,7 +14,6 @@ public class GetAttributesRequestMessage extends SerializedMessage implements Se
 
     @Override
     public Message handle(MessageHandler m) {
-        System.out.println("siemanko");
         return m.handleMessage(this);
     }
 }
