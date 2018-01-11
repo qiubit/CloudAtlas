@@ -22,8 +22,6 @@ public class SetAttributeMessage extends SerializedMessage implements Serializab
         return value;
     }
 
-    public void setReceiverQueueName(String qName) { this.receiverQueueName = qName; }
-
     @Override
     public Message handle(MessageHandler m) {
         return m.handleMessage(this);

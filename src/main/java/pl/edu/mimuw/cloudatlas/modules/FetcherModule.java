@@ -24,7 +24,7 @@ public class FetcherModule extends Module implements MessageHandler {
         System.out.println("FetcherModule: handling FetcherMeasurementsMessage");
 
         Attribute attr = new Attribute(msg.getName());
-        Value val = new ValueString(msg.getName()).convertTo(msg.getMeasurementType());
+        Value val = new ValueString(msg.getValue()).convertTo(msg.getMeasurementType());
 
         SetAttributeMessage msgRet = new SetAttributeMessage(attr, val);
         msgRet.setReceiverQueueName(ZMIHolderModule.moduleID);
