@@ -20,7 +20,7 @@ public class FetcherModule extends Module implements MessageHandler {
 
     @Override
     public Message handleMessage(FetcherMeasurementsMessage msg) {
-        System.out.println("FetcherModule: handling FetcherMeasurementsMessage");
+        // System.out.println("FetcherModule: handling FetcherMeasurementsMessage");
 
         Attribute attr = new Attribute(msg.getName());
         Value val = new ValueString(msg.getValue()).convertTo(msg.getMeasurementType());

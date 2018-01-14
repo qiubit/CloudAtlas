@@ -116,6 +116,18 @@ public class GossipModule extends Module implements MessageHandler {
     @Override
     public Message handleMessage(InitiateGossipMessage msg) {
         System.out.println("Gossip: Initializing gossip");
+        if (this.remoteConnection != null) {
+            try {
+                this.remoteConnection.close();
+            } catch (IOException e) {
+                System.out.println("Gossip: could not close connection");
+                e.printStackTrace();
+            }
+        }
+        this.currentLocal = null;
+        this.currentRemote = null;
+        this.remoteConnection = null;
+        this.remoteChannel = null;
         Message reqMsg = new GetZMILevelsRequestMessage();
         try {
             sendMsg(ZMIHolderModule.moduleID, null, reqMsg, Module.SERIALIZED_TYPE, GossipModule.moduleID);
@@ -181,12 +193,16 @@ public class GossipModule extends Module implements MessageHandler {
 
         boolean communicationFail = false;
         ConnectionFactory factory = new ConnectionFactory();
+        factory.setUsername("cloudatlas");
+        factory.setPassword("cloudatlas");
         try {
             Message toSend = new GetZMIGossipInfoRequestMessage(this.currentLevel);
             toSend.setReceiverQueueName(ZMIHolderModule.moduleID);
 
             this.remoteConnection = factory.newConnection(addresses);
             this.remoteChannel = remoteConnection.createChannel();
+            String remoteAddress = this.remoteChannel.getConnection().getAddress().getHostAddress();
+            System.out.println("Gossip: gossipping with " + remoteAddress);
             remoteChannel.queueDeclare(ZMIHolderModule.moduleID, false, false, false, null);
 
             AMQP.BasicProperties props = new AMQP.BasicProperties.Builder()
@@ -211,6 +227,7 @@ public class GossipModule extends Module implements MessageHandler {
         HashMap<String, ZMI> remoteZmis = msg.relevantZMIs;
         this.currentRemote = remoteZmis;
 
+        System.out.println("Gossip: local ZMI info " + currentLocal);
         System.out.println("Gossip: remote ZMI info " + remoteZmis);
 
         GossipProcessor processor = new GossipProcessor(currentLocal, currentRemote, this.zmiTimeout);

@@ -28,11 +28,11 @@ public class TimerModule extends Module {
         public void run() {
 
                 try {
-                    System.out.println("Timer: Sending message in " + this.delayMillis + " ms");
-                    System.out.println("Timer: Current time: " + System.currentTimeMillis() + " ms");
+                    // System.out.println("Timer: Sending message in " + this.delayMillis + " ms");
+                    // System.out.println("Timer: Current time: " + System.currentTimeMillis() + " ms");
                     Thread.sleep(this.delayMillis);
-                    System.out.println("Timer: Sending message to " + this.receiverQueue);
-                    System.out.println("Timer: Current time: " + System.currentTimeMillis() + " ms");
+                    // System.out.println("Timer: Sending message to " + this.receiverQueue);
+                    // System.out.println("Timer: Current time: " + System.currentTimeMillis() + " ms");
                     synchronized (TimerModule.class) {
                         sendMsg(this.receiverQueue, "", msg, Module.SERIALIZED_TYPE);
                     }
