@@ -11,7 +11,6 @@ import java.util.Properties;
 
 public class NewAgent {
     public static void main(String[] args) throws Exception {
-        /*
         System.out.println("Reading config file: " + args[0]);
 
         Properties properties = new Properties();
@@ -22,11 +21,6 @@ public class NewAgent {
         Config config = new Config(properties);
 
         ZMIGenerator generator = new ZMIGenerator(config.getZonePath());
-        */
-
-        System.out.println("Local IP: " + InetAddress.getLocalHost().getHostAddress());
-
-        ZMIGenerator generator = new ZMIGenerator(new PathName("/bruna/24/golas"));
         ZMI rootZmi = generator.getRootZmi();
         ZMI selfZmi = generator.getSelfZmi();
 
