@@ -368,7 +368,13 @@ public class ZMIHolderModule extends Module implements MessageHandler {
             current = current.getFather();
         }
 
-        return new GetZMIGossipInfoResponseMessage(relevantZmis, getFallbackContactsForPath(new PathName(gossipLevel)));
+        Message ret = new GetZMIGossipInfoResponseMessage(
+                relevantZmis,
+                getFallbackContactsForPath(new PathName(gossipLevel))
+        );
+        ret.setReceiverHostname(msg.getSenderHostname());
+
+        return ret;
     }
 
     // "Leader" sibling is a sibling at fixed level, which is on path from self to root

@@ -198,6 +198,7 @@ public class GossipModule extends Module implements MessageHandler {
         try {
             Message toSend = new GetZMIGossipInfoRequestMessage(this.currentLevel);
             toSend.setReceiverQueueName(ZMIHolderModule.moduleID);
+            toSend.setSenderHostname();
 
             this.remoteConnection = factory.newConnection(addresses);
             this.remoteChannel = remoteConnection.createChannel();

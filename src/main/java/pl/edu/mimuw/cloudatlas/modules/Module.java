@@ -4,6 +4,8 @@ import com.rabbitmq.client.*;
 import pl.edu.mimuw.cloudatlas.messages.*;
 
 import java.io.*;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -12,6 +14,7 @@ import java.util.concurrent.BlockingQueue;
 public abstract class Module implements MessageHandler {
 
     private final String moduleID;
+    private String localIP = null;
 
     public static final String JSON_TYPE = "application/json";
     public static final String SERIALIZED_TYPE = "application/java-serialized-object";
@@ -22,6 +25,21 @@ public abstract class Module implements MessageHandler {
     private Long id = 0L;
     protected HashMap<Long, BlockingQueue<Message>> responseQueue = new HashMap<>();
     protected final Object responseQueueLock = new Object();
+
+    public String getLocalIP() {
+        if (localIP == null) {
+            try {
+                localIP = InetAddress.getLocalHost().getHostAddress();
+            } catch (UnknownHostException e) {
+                System.out.println("Module: Could not detect local IP address");
+            }
+        }
+        return localIP;
+    }
+
+    public String constructCorrelationId(String id, String address) {
+        return id + "/" + address;
+    }
 
     private Message visitMessage(Message msg) {
         return msg.handle(this);
@@ -138,11 +156,26 @@ public abstract class Module implements MessageHandler {
         return handleMessage((Message) msg);
     }
 
+    private class DeliveryHandler {
+        private final String hostname;
+
+        public DeliveryHandler(String hostname) {
+            this.hostname = hostname;
+        }
+
+        public void handleDelivery(String consumerTag, Envelope envelope,
+                                   AMQP.BasicProperties properties, byte[] body) {
+
+        }
+    }
+
     protected Module(String moduleID) throws Exception {
         System.out.println(moduleID + ": starting");
         this.moduleID = moduleID;
         ConnectionFactory factory = new ConnectionFactory();
         factory.setHost("localhost");
+        factory.setUsername("cloudatlas");
+        factory.setPassword("cloudatlas");
         connection = factory.newConnection();
         myChannel = connection.createChannel();
         myChannel.queueDeclare(moduleID, false, false, false, null);
@@ -171,6 +204,7 @@ public abstract class Module implements MessageHandler {
                         throw new IOException("Unexpected msg contentType: " + contentType);
                     }
 
+                    // If some thread is waiting for correlated message, it will handle it
                     synchronized (responseQueueLock) {
                         Long correlationId = null;
                         try {
@@ -185,7 +219,7 @@ public abstract class Module implements MessageHandler {
                                 System.out.println("Module: Could not put into responseQueue");
                                 e.printStackTrace();
                             }
-
+                            return;
                         }
                     }
 
@@ -199,12 +233,48 @@ public abstract class Module implements MessageHandler {
                                 .contentType(Module.SERIALIZED_TYPE)
                                 .build();
 
-                        String replyTo;
+                        String replyToQueue;
+                        String replyToHostname;
                         if (response.getReceiverQueueName() != null)
-                            replyTo = response.getReceiverQueueName();
+                            replyToQueue = response.getReceiverQueueName();
                         else
-                            replyTo = properties.getReplyTo();
-                        myChannel.basicPublish("", replyTo, replyProps, response.toBytes());
+                            replyToQueue = properties.getReplyTo();
+
+                        if (response.getReceiverHostname() != null)
+                            replyToHostname = response.getReceiverHostname();
+                        else
+                            replyToHostname = "localhost";
+
+                        // We can use channel for localhost contact
+                        if (replyToHostname.equals("localhost")
+                                || replyToHostname.equals(InetAddress.getLocalHost().getHostAddress()))
+                            myChannel.basicPublish("", replyToQueue, replyProps, response.toBytes());
+                        // We must create new, temporary channel and connection
+                        else {
+                            try {
+                                ConnectionFactory factory;
+                                Connection connection;
+                                Channel channel;
+
+                                System.out.println("Module: Sending message to " + replyToHostname);
+
+                                factory = new ConnectionFactory();
+                                factory.setHost(replyToHostname);
+                                factory.setUsername("cloudatlas");
+                                factory.setPassword("cloudatlas");
+
+                                connection = factory.newConnection();
+                                channel = connection.createChannel();
+                                channel.queueDeclare(replyToQueue, false, false, false, null);
+
+                                channel.basicPublish("", replyToQueue, replyProps, response.toBytes());
+                                channel.close();
+                                connection.close();
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                System.out.println("Module: Couldn't send remote message");
+                            }
+                        }
                     }
                 } catch (ClassNotFoundException e) {
                     System.out.println("Got Invalid msg");
