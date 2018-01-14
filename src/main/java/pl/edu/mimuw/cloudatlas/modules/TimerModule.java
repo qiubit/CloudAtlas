@@ -11,7 +11,6 @@ public class TimerModule extends Module {
 
     public TimerModule() throws Exception {
         super(moduleID);
-        System.out.println("Timer: Starting");
     }
 
     private class MessageSender implements Runnable {

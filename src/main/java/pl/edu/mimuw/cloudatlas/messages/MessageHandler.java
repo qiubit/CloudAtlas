@@ -17,6 +17,14 @@ public interface MessageHandler {
     Message handleMessage(SetFallbackContactsMessage msg);
     Message handleMessage(SetAttributeMessage msg);
     Message handleMessage(ExecuteQueriesMessage msg);
+    Message handleMessage(GetZMILevelsRequestMessage msg);
+    Message handleMessage(GetZMILevelsResponseMessage msg);
+    Message handleMessage(GetZMIGossipInfoRequestMessage msg);
+    Message handleMessage(GetZMIGossipInfoResponseMessage msg);
+    Message handleMessage(GossippedZMIMessage msg);
+
+    // Gossip
+    Message handleMessage(InitiateGossipMessage msg);
 
     // Timer
     Message handleMessage(ScheduledMessage msg);

@@ -14,7 +14,7 @@ cd $DIR
 python $DIR/utils/fetcher/fetchers.py $DIR/config.ini &
 PID_2=$!
 sleep 5
-java -Djava.security.policy=./agent.policy -cp "./target/CloudAtlas-1.0-SNAPSHOT.jar:./lib/*" pl.edu.mimuw.cloudatlas.agent.NewAgent &
+java -Djava.security.policy=./agent.policy -cp "./target/CloudAtlas-1.0-SNAPSHOT.jar:./lib/*" pl.edu.mimuw.cloudatlas.agent.NewAgent agentConfig.properties &
 PID_3=$!
 sleep 5
 java -Djava.security.policy=./agent.policy -cp "./target/CloudAtlas-1.0-SNAPSHOT.jar:./lib/*" pl.edu.mimuw.cloudatlas.fetcher.Fetcher &

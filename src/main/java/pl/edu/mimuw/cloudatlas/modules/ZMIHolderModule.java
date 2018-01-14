@@ -5,6 +5,7 @@ import pl.edu.mimuw.cloudatlas.interpreter.InterpreterException;
 import pl.edu.mimuw.cloudatlas.interpreter.QueryResult;
 import pl.edu.mimuw.cloudatlas.interpreter.query.Yylex;
 import pl.edu.mimuw.cloudatlas.interpreter.query.parser;
+import pl.edu.mimuw.cloudatlas.model.ValueString;
 import pl.edu.mimuw.cloudatlas.messages.*;
 import pl.edu.mimuw.cloudatlas.model.*;
 
@@ -19,20 +20,119 @@ import java.util.stream.Collectors;
 public class ZMIHolderModule extends Module implements MessageHandler {
 
     public static final String moduleID = "ZMIHolder";
+    private final long QUERY_EVAL_FREQ = 5000;
 
     private ZMI root;
+    private ZMI self;
     private ArrayList<ValueContact> fallback_contacts = new ArrayList<>();
     private HashMap<Attribute, QueryInformation> queries = new HashMap<>();
+    private HashSet<String> gossipLevels = new HashSet<>();
+    private HashMap<String, ZMI> pathToZmi = new HashMap<>();
+    private HashMap<String, List<ZMI>> siblingZmis = new HashMap<>();
+    private HashMap<ZMI, String> zmiFullPaths = new HashMap<>();
 
-    public ZMIHolderModule(ZMI root) throws Exception {
+    // Indices leading from root to self
+    private final ArrayList<Integer> rootSelfZmiIndices;
+
+    private ArrayList<Integer> computeRootSelfPathNames(ZMI root, ZMI self) {
+        ArrayList<String> zmiNames = new ArrayList<>();
+
+        ZMI current = self;
+        while (current != root) {
+            String name = current.getAttributes().get("name").toString();
+            if (name == null)
+                throw new IllegalArgumentException("ZMI with no name attribute");
+            zmiNames.add(name);
+            current = current.getFather();
+        }
+
+        ArrayList<Integer> computed = new ArrayList<>();
+        Collections.reverse(zmiNames);
+        current = root;
+        for (String name : zmiNames) {
+            ZMI next = null;
+            int idx;
+            for (idx = 0; idx < current.getSons().size(); idx++) {
+                ZMI son = current.getSons().get(idx);
+                if (son.getAttributes().get("name").toString().equals(name)) {
+                    next = son;
+                    break;
+                }
+            }
+            if (next == null)
+                throw new IllegalArgumentException("No path from root to self");
+            computed.add(idx);
+            current = next;
+        }
+        return computed;
+    }
+
+    public ZMIHolderModule(ZMI root, ZMI self) throws Exception {
         super(moduleID);
         this.root = root;
-        System.out.println("ZMIHolder: starting");
+        this.self = self;
+        if (this.root.getFather() != null)
+            throw new IllegalArgumentException("Root father should be null");
+
+        ArrayList<ValueContact> defaultFallback = new ArrayList<>();
+        this.rootSelfZmiIndices = computeRootSelfPathNames(root, self);
+        int nextIdx = 0;
+
+        // ZMI metadata computation
+        ZMI current = root;
+        PathName curPath = new PathName("/");
+        while (current != null) {
+            // current ZMI metadata update
+            defaultFallback.add(createContact(curPath.toString(), (byte) 127, (byte) 0, (byte) 0, (byte) 1));
+            this.pathToZmi.put(curPath.toString(), current);
+            this.siblingZmis.put(curPath.toString(), new ArrayList<>());
+            this.zmiFullPaths.put(current, curPath.toString());
+
+            // current ZMI siblings metadata update
+            ZMI father = current.getFather();
+            if (father != null) {
+                this.gossipLevels.add(curPath.toString());
+                for (ZMI zmi : father.getSons()) {
+                    if (!(zmi == current)) {
+                        String siblingPath =
+                                curPath.levelUp().levelDown(zmi.getAttributes().get("name").toString()).toString();
+                        this.siblingZmis.get(curPath.toString()).add(zmi);
+                        this.zmiFullPaths.put(
+                                zmi,
+                                siblingPath
+                        );
+                        this.pathToZmi.put(siblingPath, zmi);
+                    }
+                }
+            }
+
+            List<ZMI> currentSons = current.getSons();
+            if (currentSons.size() == 0)
+                current = null;
+            else {
+                current = currentSons.get(rootSelfZmiIndices.get(nextIdx));
+                curPath = curPath.levelDown(current.getAttributes().get(new Attribute("name")).toString());
+                nextIdx++;
+            }
+        }
+
+        this.fallback_contacts = defaultFallback;
+
         evaluateAllQueries();
     }
 
     public HashMap<Attribute, QueryInformation> getQueries() {
         return new HashMap<>(queries);
+    }
+
+    private ArrayList<ValueContact> getFallbackContactsForPath(PathName path) {
+        ArrayList<ValueContact> ret = new ArrayList<>();
+        for (ValueContact contact : this.fallback_contacts) {
+            if (contact.getName().equals(path)) {
+                ret.add(contact);
+            }
+        }
+        return ret;
     }
 
     private void executeQueries(ZMI zmi, String query) throws Exception {
@@ -56,9 +156,17 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         for (QueryInformation query : getQueries().values()) {
             executeQueries(root, query.getQuery());
         }
-        Message scheduleQueriesMsg = new ScheduledMessage(new ExecuteQueriesMessage(), 5000);
+        Message scheduleQueriesMsg = new ScheduledMessage(new ExecuteQueriesMessage(), QUERY_EVAL_FREQ);
         scheduleQueriesMsg.setReceiverQueueName(ZMIHolderModule.moduleID);
         sendMsg(TimerModule.moduleID, "", scheduleQueriesMsg, Module.SERIALIZED_TYPE);
+    }
+
+    private void evaluateAllQueriesWithoutScheduling() throws Exception {
+        for (QueryInformation query : getQueries().values()) {
+            executeQueries(root, query.getQuery());
+        }
+        Message scheduleQueriesMsg = new ScheduledMessage(new ExecuteQueriesMessage(), QUERY_EVAL_FREQ);
+        scheduleQueriesMsg.setReceiverQueueName(ZMIHolderModule.moduleID);
     }
 
     public static HashMap<ZMI, List<QueryResult>> getResultsForNonSingletonZMIs(ZMI zmi, String query) {
@@ -117,7 +225,7 @@ public class ZMIHolderModule extends Module implements MessageHandler {
     }
 
     private void setAttribute(Attribute attr, Value value) {
-        ZMI zmi = pathNameToZMI(new PathName("/uw/violet07"));
+        ZMI zmi = self;
         if (zmi.getSons().size() > 0) return;
         zmi.getAttributes().addOrChange(attr, value);
     }
@@ -232,6 +340,123 @@ public class ZMIHolderModule extends Module implements MessageHandler {
             e.printStackTrace();
         }
         return null;
+    }
+
+    @Override
+    public Message handleMessage(GetZMILevelsRequestMessage msg) {
+        return new GetZMILevelsResponseMessage(this.gossipLevels);
+    }
+
+    @Override
+    public Message handleMessage(GetZMIGossipInfoRequestMessage msg) {
+        // Fetch requested gossip level from message
+        String gossipLevel = msg.requestedLevel;
+
+        // This will collect all relevant ZMIs (requested level siblings + all nodes up the tree except root)
+        HashMap<String, ZMI> relevantZmis = new HashMap<>();
+
+        ZMI current = pathToZmi.get(gossipLevel);
+        while (current != root) {
+            String curPath = zmiFullPaths.get(current);
+            List<ZMI> curLevelSiblings = new ArrayList<>();
+            curLevelSiblings.add(current);
+            if (siblingZmis.get(curPath) != null)
+                curLevelSiblings.addAll(siblingZmis.get(curPath));
+            for (ZMI sibling : curLevelSiblings) {
+                relevantZmis.put(this.zmiFullPaths.get(sibling), sibling);
+            }
+            current = current.getFather();
+        }
+
+        return new GetZMIGossipInfoResponseMessage(relevantZmis, getFallbackContactsForPath(new PathName(gossipLevel)));
+    }
+
+    // "Leader" sibling is a sibling at fixed level, which is on path from self to root
+    // Node's father must already be set to correct one from inside holded ZMI tree
+    private ZMI getLeaderSiblingForZmi(ZMI node) {
+        int nextIdx = 0;
+        ZMI father = node.getFather();
+        ZMI current = root;
+        while (current != father) {
+            current = current.getSons().get(this.rootSelfZmiIndices.get(nextIdx));
+            nextIdx++;
+        }
+        return current.getSons().get(nextIdx);
+    }
+
+    @Override
+    public Message handleMessage(GossippedZMIMessage msg) {
+        // We need to rebuild entire ZMI structure based on gossippedZmi
+        // and the ZMI info we've got saved currently
+
+        // Update info
+        HashMap<String, ZMI> gossippedZmi = msg.gossippedZmi;
+        filterGossipedZmi(gossippedZmi);
+
+        for (Map.Entry<String, ZMI> e : gossippedZmi.entrySet()) {
+            // Always add ZMI in that case
+            if (this.pathToZmi.get(e.getKey()) == null) {
+                PathName fatherPath = new PathName(e.getKey()).levelUp();
+                if (this.pathToZmi.get(fatherPath.toString()) != null) {
+                    ZMI father = this.pathToZmi.get(fatherPath.toString());
+                    ZMI currentChild = e.getValue();
+
+                    // Merge currentChild into ZMI structure
+                    currentChild.removeSons();
+                    currentChild.setFather(father);
+                    father.addSon(currentChild);
+
+                    // Insert it as new sibling for some ZMI
+                    this.pathToZmi.put(e.getKey(), currentChild);
+                    ZMI leaderSibling = getLeaderSiblingForZmi(currentChild);
+                    String leaderSiblingPathStr = this.zmiFullPaths.get(leaderSibling);
+                    this.siblingZmis.get(leaderSiblingPathStr).add(currentChild);
+                    this.zmiFullPaths.put(currentChild, e.getKey());
+                }
+            } else {
+                // Based on timestamps, decide which ZMI attributes to use
+                ZMI currentChild = this.pathToZmi.get(e.getKey());
+                ZMI gossippedChild = e.getValue();
+                if (gossippedChild.getTimestamp() > currentChild.getTimestamp()) {
+                    currentChild.cloneAttributes(gossippedChild);
+                }
+            }
+        }
+
+        // Update current ZMI info
+        try {
+            evaluateAllQueriesWithoutScheduling();
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("ZMIHolder: Error during query evaluation");
+        }
+
+        return null;
+    }
+
+    // We are only interested in nodes that have a parent in currently held ZMI
+    private void filterGossipedZmi(HashMap<String, ZMI> gossippedZmi) {
+        ArrayList<String> toDelete = new ArrayList<>();
+        for (Map.Entry<String, ZMI> e : gossippedZmi.entrySet()) {
+            if (!e.getKey().equals("/")) {
+                String parentPathNameStr = new PathName(e.getKey()).levelUp().toString();
+                if (pathToZmi.get(parentPathNameStr) == null)
+                    toDelete.add(e.getKey());
+            }
+        }
+        for (String s : toDelete)
+            gossippedZmi.remove(s);
+    }
+
+    // Root is level 0
+    private Integer pathToLevel(String pathStr) {
+        int level = 0;
+        PathName path = new PathName(pathStr);
+        while (!path.toString().equals("/")) {
+            level++;
+            path = path.levelUp();
+        }
+        return level;
     }
 
     private static ValueContact createContact(String path, byte ip1, byte ip2, byte ip3, byte ip4)

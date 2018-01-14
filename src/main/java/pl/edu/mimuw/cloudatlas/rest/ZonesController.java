@@ -161,38 +161,9 @@ class ZoneList {
     }
 }
 
-class RmiClient {
-    private String host;
-    private String serviceName;
-    private AgentApi agentApi;
-
-    public RmiClient(String host, String serviceName) {
-        this.host = host;
-        this.serviceName = serviceName;
-    }
-
-    public AgentApi getAgentApi() {
-        if (agentApi == null) {
-            try {
-                if (System.getSecurityManager() == null) {
-                    SecurityManager m = new SecurityManager();
-                    System.setSecurityManager(m);
-                }
-                Registry registry = LocateRegistry.getRegistry(this.host);
-                this.agentApi = (AgentApi) registry.lookup(this.serviceName);
-            } catch (Exception e) {
-                e.printStackTrace();
-                System.err.println("RMI agentapi problem");
-            }
-        }
-        return agentApi;
-    }
-}
-
 
 @RestController
 public class ZonesController {
-    RmiClient rmiClient = new RmiClient("localhost", "AgentApi");
 
     private final static String QUEUE_NAME = "SpringRest";
 

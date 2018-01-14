@@ -25,26 +25,32 @@
 package pl.edu.mimuw.cloudatlas.model;
 
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.io.Serializable;
+import java.util.*;
 import java.util.Map.Entry;
 
 /**
  * A zone management information. This object is a single node in a zone hierarchy. It stores zone attributes as well as
  * references to its father and sons in the tree.
  */
-public class ZMI implements Cloneable {
-    private final AttributesMap attributes = new AttributesMap();
+public class ZMI implements Cloneable, Serializable {
+    private AttributesMap attributes = new AttributesMap();
 
-    private final List<ZMI> sons = new ArrayList<ZMI>();
+    private List<ZMI> sons = new ArrayList<ZMI>();
     private ZMI father;
+
+    private Long timestamp;
 
     /**
      * Creates a new ZMI with no father (the root zone) and empty sons list.
      */
     public ZMI() {
-        this(null);
+        this((ZMI) null);
+    }
+
+    public ZMI(Long tsMillis) {
+        this((ZMI) null);
+        this.timestamp = tsMillis;
     }
 
     /**
@@ -57,6 +63,12 @@ public class ZMI implements Cloneable {
      */
     public ZMI(ZMI father) {
         this.father = father;
+        this.timestamp = System.currentTimeMillis();
+    }
+
+    public ZMI(ZMI father, Long tsMillis) {
+        this.father = father;
+        this.timestamp = tsMillis;
     }
 
     /**
@@ -111,6 +123,10 @@ public class ZMI implements Cloneable {
         sons.remove(son);
     }
 
+    public void removeSons() {
+        this.sons.clear();
+    }
+
     /**
      * Gets a map of all the attributes stored in this ZMI.
      *
@@ -153,6 +169,16 @@ public class ZMI implements Cloneable {
         return result;
     }
 
+    public ZMI cloneSingleNode() {
+        ZMI result = new ZMI();
+        result.attributes.add(attributes.clone());
+        return result;
+    }
+
+    public void cloneAttributes(ZMI cloneFrom) {
+        this.attributes = cloneFrom.attributes.clone();
+    }
+
     /**
      * Prints a textual representation of this ZMI. It contains only attributes of this node.
      *
@@ -163,4 +189,6 @@ public class ZMI implements Cloneable {
     public String toString() {
         return attributes.toString();
     }
+
+    public Long getTimestamp() { return this.timestamp; }
 }

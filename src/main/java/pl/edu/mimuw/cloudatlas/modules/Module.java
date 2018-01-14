@@ -4,6 +4,10 @@ import com.rabbitmq.client.*;
 import pl.edu.mimuw.cloudatlas.messages.*;
 
 import java.io.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
 public abstract class Module implements MessageHandler {
 
@@ -14,6 +18,14 @@ public abstract class Module implements MessageHandler {
 
     private Connection connection;
     private Channel myChannel;
+
+    private Long id = 0L;
+    protected HashMap<Long, BlockingQueue<Message>> responseQueue = new HashMap<>();
+    protected final Object responseQueueLock = new Object();
+
+    private Message visitMessage(Message msg) {
+        return msg.handle(this);
+    }
 
     @Override
     public Message handleMessage(Message msg) {
@@ -96,17 +108,49 @@ public abstract class Module implements MessageHandler {
         return handleMessage((Message) msg);
     }
 
-    private Message visitMessage(Message msg) {
-        return msg.handle(this);
+    @Override
+    public Message handleMessage(InitiateGossipMessage msg) {
+        return handleMessage((Message) msg);
+    }
+
+    @Override
+    public Message handleMessage(GetZMILevelsRequestMessage msg) {
+        return handleMessage((Message) msg);
+    }
+
+    @Override
+    public Message handleMessage(GetZMILevelsResponseMessage msg) {
+        return handleMessage((Message) msg);
+    }
+
+    @Override
+    public Message handleMessage(GetZMIGossipInfoRequestMessage msg) {
+        return handleMessage((Message) msg);
+    }
+
+    @Override
+    public Message handleMessage(GetZMIGossipInfoResponseMessage msg) {
+        return handleMessage((Message) msg);
+    }
+
+    @Override
+    public Message handleMessage(GossippedZMIMessage msg) {
+        return handleMessage((Message) msg);
     }
 
     protected Module(String moduleID) throws Exception {
+        System.out.println(moduleID + ": starting");
         this.moduleID = moduleID;
         ConnectionFactory factory = new ConnectionFactory();
         factory.setHost("localhost");
         connection = factory.newConnection();
         myChannel = connection.createChannel();
         myChannel.queueDeclare(moduleID, false, false, false, null);
+
+        // Fetch references
+        Object responseQueueLock = this.responseQueueLock;
+        HashMap<Long, BlockingQueue<Message>> responseQueue = this.responseQueue;
+
         Consumer consumer = new DefaultConsumer(myChannel) {
             @Override
             public void handleDelivery(String consumerTag, Envelope envelope,
@@ -126,6 +170,25 @@ public abstract class Module implements MessageHandler {
                     } else {
                         throw new IOException("Unexpected msg contentType: " + contentType);
                     }
+
+                    synchronized (responseQueueLock) {
+                        Long correlationId = null;
+                        try {
+                            correlationId = Long.parseLong(properties.getCorrelationId());
+                        } catch (NumberFormatException e) {
+                            correlationId = null;
+                        }
+                        if (responseQueue.get(correlationId) != null) {
+                            try {
+                                responseQueue.get(correlationId).put(message);
+                            } catch (InterruptedException e) {
+                                System.out.println("Module: Could not put into responseQueue");
+                                e.printStackTrace();
+                            }
+
+                        }
+                    }
+
 
                     Message response = visitMessage(message);
                     // TODO: Allow JSON response?
@@ -162,4 +225,22 @@ public abstract class Module implements MessageHandler {
         myChannel.basicPublish("", recieverModuleID, props, msg.toBytes());
     }
 
+    protected void sendMsg(String recieverModuleID, String msgID, Message msg, String msgContentType, String senderModuleId)
+            throws java.io.IOException {
+        AMQP.BasicProperties props = new AMQP.BasicProperties
+                .Builder()
+                .correlationId(msgID)
+                .replyTo(senderModuleId)
+                .contentType(msgContentType)
+                .build();
+        myChannel.basicPublish("", recieverModuleID, props, msg.toBytes());
+    }
+
+    protected Long getFreeId() {
+        Long freeId = this.id++;
+        synchronized (this.responseQueueLock) {
+            this.responseQueue.put(freeId, new ArrayBlockingQueue<Message>(1));
+        }
+        return freeId;
+    }
 }

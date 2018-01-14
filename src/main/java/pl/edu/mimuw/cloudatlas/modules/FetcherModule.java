@@ -16,7 +16,6 @@ public class FetcherModule extends Module implements MessageHandler {
 
     public FetcherModule() throws Exception {
         super(moduleID);
-        System.out.println("Fetcher: starting");
     }
 
     @Override
