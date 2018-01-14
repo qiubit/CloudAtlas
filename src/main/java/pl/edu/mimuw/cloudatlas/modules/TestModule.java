@@ -3,7 +3,15 @@ package pl.edu.mimuw.cloudatlas.modules;
 
 import org.json.simple.JSONObject;
 import pl.edu.mimuw.cloudatlas.messages.*;
+import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.PathName;
+import pl.edu.mimuw.cloudatlas.model.Query;
+import pl.edu.mimuw.cloudatlas.signer.QuerySigner;
+
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 
 import static pl.edu.mimuw.cloudatlas.agent.Agent.*;
 
@@ -31,11 +39,34 @@ public class TestModule extends Module {
 
     public static void main(String[] args) throws Exception {
 
-        TestModule testModule = new TestModule();
-        ZMIHolderModule zmiHolderModule = new ZMIHolderModule(ZMIHolderModule.createTestHierarchy());
-        FetcherModule fetcherModule = new FetcherModule();
-        TimerModule timerModule = new TimerModule();
+//        TestModule testModule = new TestModule();
+//        ZMIHolderModule zmiHolderModule = new ZMIHolderModule(ZMIHolderModule.createTestHierarchy());
+//        FetcherModule fetcherModule = new FetcherModule();
+//        TimerModule timerModule = new TimerModule();
         // testModule.test();
+
+        KeyPairGenerator keyGenerator =
+                KeyPairGenerator.getInstance("RSA");
+        keyGenerator.initialize(1024);
+        KeyPair keyPair = keyGenerator.generateKeyPair();
+        PrivateKey privateKey = keyPair.getPrivate();
+        PublicKey publicKey = keyPair.getPublic();
+
+        Query query = new Query(new Attribute("&siema"), "SELECT 1 AS dupa");
+        byte[] s = QuerySigner.signInstallQuery(query, privateKey);
+        if (QuerySigner.verifyInstallSignature(query, s, publicKey)) {
+            System.out.println("OK");
+        } else {
+            System.out.println("NOT OK");
+        }
+
+        if (QuerySigner.verifyUninstallSignature(query, s, publicKey)) {
+            System.out.println("NOT OK");
+        } else {
+            System.out.println("OK");
+        }
+
+
     }
 
     public void test() throws Exception {

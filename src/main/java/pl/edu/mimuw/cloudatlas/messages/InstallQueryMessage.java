@@ -1,16 +1,16 @@
 package pl.edu.mimuw.cloudatlas.messages;
 
-import pl.edu.mimuw.cloudatlas.model.Attribute;
+import pl.edu.mimuw.cloudatlas.model.Query;
 
 import java.io.Serializable;
 
 public class InstallQueryMessage extends SerializedMessage implements Serializable {
-    public final Attribute name;
-    public final String query;
+    public final Query query;
+    public final byte[] signature;
 
-    public InstallQueryMessage(Attribute name, String query) {
-        this.name = name;
+    public InstallQueryMessage(Query query, byte[] signature) {
         this.query = query;
+        this.signature = signature;
     }
 
     @Override

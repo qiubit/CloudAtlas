@@ -1,15 +1,11 @@
 package pl.edu.mimuw.cloudatlas.messages;
 
-import pl.edu.mimuw.cloudatlas.model.Query;
-
 import java.io.Serializable;
 
-public class UninstallQueryMessage extends SerializedMessage implements Serializable {
-    public final Query query;
+public class SignResponseMessage extends SerializedMessage implements Serializable {
     public final byte[] signature;
 
-    public UninstallQueryMessage(Query query, byte[] signature) {
-        this.query = query;
+    public SignResponseMessage(byte[] signature) {
         this.signature = signature;
     }
 

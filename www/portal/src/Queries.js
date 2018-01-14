@@ -51,11 +51,11 @@ class Queries extends Component {
     })
   }
 
-  onQueryDelete = (qName) => () => {
+  onQueryDelete = (qName, query) => () => {
     axios({
       method: 'post',
       url: this.props.agentAddress + "/uninstall_query",
-      data: {'name': qName},
+      data: {'name': qName, 'query': query},
       headers: {'Content-Type': 'application/json'},
     }).then(res => {
       this.fetchQueries();
@@ -76,7 +76,7 @@ class Queries extends Component {
           {this.state.queries.map((q, idx) => (
             <Segment key={idx}>
               {q.name + ": " + q.query}
-              <Button onClick={this.onQueryDelete(q.name)} style={{ marginLeft: 20 }} icon><Icon name="delete" /></Button>
+              <Button onClick={this.onQueryDelete(q.name, q.query)} style={{ marginLeft: 20 }} icon><Icon name="delete" /></Button>
             </Segment>
           ))}
         </Segment>

@@ -96,6 +96,20 @@ public abstract class Module implements MessageHandler {
         return handleMessage((Message) msg);
     }
 
+    @Override
+    public Message handleMessage(SignInstallQueryRequestMessage msg) { return handleMessage((Message) msg); }
+
+    @Override
+    public Message handleMessage(SignUninstallQueryRequestMessage msg) { return handleMessage((Message) msg); }
+
+    @Override
+    public Message handleMessage(SignResponseMessage msg) { return handleMessage((Message) msg); }
+
+    @Override
+    public Message handleMessage(StatusResponseMessage msg) {
+        return handleMessage((Message) msg);
+    }
+
     private Message visitMessage(Message msg) {
         return msg.handle(this);
     }

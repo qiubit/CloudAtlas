@@ -23,4 +23,10 @@ public interface MessageHandler {
 
     // Fetcher communication messages (JSON)
     Message handleMessage(FetcherMeasurementsMessage msg);
+
+    // Signer communication messages
+    Message handleMessage(SignInstallQueryRequestMessage msg);
+    Message handleMessage(SignUninstallQueryRequestMessage msg);
+    Message handleMessage(SignResponseMessage msg);
+    Message handleMessage(StatusResponseMessage msg);
 }

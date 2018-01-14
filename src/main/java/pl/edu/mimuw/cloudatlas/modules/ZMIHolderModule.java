@@ -7,11 +7,13 @@ import pl.edu.mimuw.cloudatlas.interpreter.query.Yylex;
 import pl.edu.mimuw.cloudatlas.interpreter.query.parser;
 import pl.edu.mimuw.cloudatlas.messages.*;
 import pl.edu.mimuw.cloudatlas.model.*;
+import pl.edu.mimuw.cloudatlas.signer.QuerySigner;
 
 import java.io.ByteArrayInputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.security.InvalidParameterException;
+import java.security.PublicKey;
 import java.text.ParseException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -23,10 +25,12 @@ public class ZMIHolderModule extends Module implements MessageHandler {
     private ZMI root;
     private ArrayList<ValueContact> fallback_contacts = new ArrayList<>();
     private HashMap<Attribute, QueryInformation> queries = new HashMap<>();
+    private PublicKey publicKey;
 
-    public ZMIHolderModule(ZMI root) throws Exception {
+    public ZMIHolderModule(ZMI root, PublicKey publicKey) throws Exception {
         super(moduleID);
         this.root = root;
+        this.publicKey = publicKey;
         System.out.println("ZMIHolder: starting");
         evaluateAllQueries();
     }
@@ -149,14 +153,18 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         queries.put(name, new QueryInformation(query, result_attributes));
     }
 
-    private void uninstallQuery(Attribute name) {
+    private void uninstallQuery(Attribute name, String query) {
         QueryInformation query_info = queries.get(name);
-        if (query_info != null) {
-            for (Attribute attr : query_info.getAttributes()) {
-                removeAttributeFromAllNonSingletonZMIs(root, attr);
-            }
-            queries.remove(name);
+        if (query_info == null) {
+            throw new InvalidParameterException("No query with such name");
         }
+        if (!query_info.getQuery().equals(query)) {
+            throw new InvalidParameterException("Uninstalled query does't match installed one");
+        }
+        for (Attribute attr : query_info.getAttributes()) {
+            removeAttributeFromAllNonSingletonZMIs(root, attr);
+        }
+        queries.remove(name);
     }
 
     private static boolean anyNonSingletonZMIContainsAttribute(ZMI zmi, Attribute attr) {
@@ -203,14 +211,36 @@ public class ZMIHolderModule extends Module implements MessageHandler {
 
     @Override
     public Message handleMessage(InstallQueryMessage msg) {
-        installQuery(msg.name, msg.query);
-        return null;
+        StatusResponseMessage response = new StatusResponseMessage();
+        try {
+            if (!QuerySigner.verifyInstallSignature(msg.query, msg.signature, publicKey)) {
+                System.out.println("Install query verification failed");
+                response.setError();
+                return response;
+            }
+            installQuery(msg.query.name, msg.query.query);
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setError();
+        }
+        return response;
     }
 
     @Override
     public Message handleMessage(UninstallQueryMessage msg) {
-        uninstallQuery(msg.name);
-        return null;
+        StatusResponseMessage response = new StatusResponseMessage();
+        try {
+            if (!QuerySigner.verifyUninstallSignature(msg.query, msg.signature, publicKey)) {
+                System.out.println("Uninstall query verification failed");
+                response.setError();
+                return response;
+            }
+            uninstallQuery(msg.query.name, msg.query.query);
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setError();
+        }
+        return response;
     }
 
     @Override
