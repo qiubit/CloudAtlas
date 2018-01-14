@@ -6,22 +6,19 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.X509EncodedKeySpec;
 
 public class Signer {
 
     public static void main(String[] args) throws Exception {
-        if (args.length != 2) {
-            System.out.println("Usage: ./java <public-key-path> <private-key-path>");
+        if (args.length != 1) {
+            System.out.println("Usage: ./java <private-key-path>");
             return;
         }
 
-        PublicKey publicKey = getPublicKey(args[0]);
-        PrivateKey privateKey = getPrivateKey(args[1]);
+        PrivateKey privateKey = getPrivateKey(args[0]);
 
-        new SignerModule(privateKey ,publicKey);
+        new SignerModule(privateKey);
     }
 
     private static PrivateKey getPrivateKey(String filename) throws Exception {
@@ -31,14 +28,5 @@ public class Signer {
                 new PKCS8EncodedKeySpec(keyBytes);
         KeyFactory kf = KeyFactory.getInstance("RSA");
         return kf.generatePrivate(spec);
-    }
-
-    private static PublicKey getPublicKey(String filename) throws Exception {
-        byte[] keyBytes = Files.readAllBytes(Paths.get(filename));
-
-        X509EncodedKeySpec spec =
-                new X509EncodedKeySpec(keyBytes);
-        KeyFactory kf = KeyFactory.getInstance("RSA");
-        return kf.generatePublic(spec);
     }
 }
