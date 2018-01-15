@@ -2,6 +2,8 @@ package pl.edu.mimuw.cloudatlas.modules;
 
 import com.rabbitmq.client.*;
 import pl.edu.mimuw.cloudatlas.messages.*;
+import pl.edu.mimuw.cloudatlas.model.Attribute;
+import pl.edu.mimuw.cloudatlas.model.QueryInformation;
 import pl.edu.mimuw.cloudatlas.model.ValueContact;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
 
@@ -22,6 +24,7 @@ public class GossipSenderModule extends Module implements MessageHandler {
     private Connection remoteConnection = null;
     private Channel remoteChannel = null;
     private HashMap<String, ZMI> remoteZmis = null;
+    private HashMap<Attribute, QueryInformation> remoteQueries = null;
 
     public enum GossipStrategy {
         GOSSIP_RANDOM,
@@ -88,7 +91,12 @@ public class GossipSenderModule extends Module implements MessageHandler {
         // Send remote ZMI to ZMIHandler, send local ZMI to remote host
         System.out.println(moduleID + ": Got local ZMI data [" + msg.gossippedLevel + "]");
         if (msg.gossippedLevel.equals(gossipLevel) && remoteChannel != null) {
-            Message remoteRet = new GossipTransactionRemoteZMIMessage(gossipLevel, msg.relevantZMIs, msg.fallbackContacts);
+            Message remoteRet = new GossipTransactionRemoteZMIMessage(
+                    gossipLevel,
+                    msg.relevantZMIs,
+                    msg.fallbackContacts,
+                    msg.queries
+            );
             remoteRet.setSenderHostname();
 
             try {
@@ -106,7 +114,7 @@ public class GossipSenderModule extends Module implements MessageHandler {
         }
 
         if (this.remoteZmis != null) {
-            Message localRet = new GossippedZMIMessage(this.remoteZmis);
+            Message localRet = new GossippedZMIMessage(this.remoteZmis, this.remoteQueries);
             localRet.setReceiverQueueName(ZMIHolderModule.moduleID);
             return localRet;
         }
@@ -123,6 +131,7 @@ public class GossipSenderModule extends Module implements MessageHandler {
 
         if (msg.gossipLevel.equals(gossipLevel)) {
             remoteZmis = msg.relevantZmis;
+            remoteQueries = msg.queries;
 
             Message ret = new GetZMIGossipInfoRequestMessage(gossipLevel);
             ret.setReceiverQueueName(ZMIHolderModule.moduleID);

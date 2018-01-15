@@ -196,6 +196,10 @@ public class ZMI implements Cloneable, Serializable {
         this.timestamp = timestamp;
     }
 
+    public void updateTimestamp() {
+        this.timestamp = System.currentTimeMillis();
+    }
+
     public ArrayList<ValueContact> getContacts() {
         ArrayList<ValueContact> ret = new ArrayList<>();
 

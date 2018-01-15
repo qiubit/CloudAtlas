@@ -45,7 +45,7 @@ public class GossipReceiverModule extends Module implements MessageHandler {
                 && transaction.getState().equals(GossipTransaction.State.LOCAL_ZMI_SENT)
                 && transaction.getGossipLevel().equals(msg.gossipLevel)) {
             finalizeTransaction(transaction);
-            Message toSend = new GossippedZMIMessage(msg.relevantZmis);
+            Message toSend = new GossippedZMIMessage(msg.relevantZmis, msg.queries);
             toSend.setReceiverQueueName(ZMIHolderModule.moduleID);
             return toSend;
         } else {
@@ -70,7 +70,12 @@ public class GossipReceiverModule extends Module implements MessageHandler {
                     continue;
                 if (conn != null) {
                     Message msgRemote =
-                            new GossipTransactionRemoteZMIMessage(msg.gossippedLevel, msg.relevantZMIs, msg.fallbackContacts);
+                            new GossipTransactionRemoteZMIMessage(
+                                    msg.gossippedLevel,
+                                    msg.relevantZMIs,
+                                    msg.fallbackContacts,
+                                    msg.queries
+                            );
                     msgRemote.setSenderHostname();
                     System.out.println(moduleID + ": Trying to send local " + msg.gossippedLevel + " info to " + hostname);
 

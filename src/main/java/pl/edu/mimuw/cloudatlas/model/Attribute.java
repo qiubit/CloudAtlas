@@ -36,6 +36,7 @@ import java.io.Serializable;
  */
 public class Attribute implements Serializable {
     private final String name;
+    private Long timestamp;
 
     /**
      * Creates a new <code>Attribute</code> object with the specified <code>name</code>.
@@ -48,6 +49,7 @@ public class Attribute implements Serializable {
             throw new IllegalArgumentException("Invalid name: may contain only letters, digits, underscores, "
                     + "must start with a letter and may optionally have an ampersand at the beginning.");
         this.name = name;
+        this.timestamp = System.currentTimeMillis();
     }
 
     /**
@@ -105,5 +107,13 @@ public class Attribute implements Serializable {
     @Override
     public String toString() {
         return name;
+    }
+
+    public void updateTimestamp() {
+        this.timestamp = System.currentTimeMillis();
+    }
+
+    public Long getTimestamp() {
+        return this.timestamp;
     }
 }

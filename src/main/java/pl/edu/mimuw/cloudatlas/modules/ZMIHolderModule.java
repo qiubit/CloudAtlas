@@ -146,6 +146,8 @@ public class ZMIHolderModule extends Module implements MessageHandler {
                 for (QueryResult r : result) {
                     zmi.getAttributes().addOrChange(r.getName(), r.getValue());
                 }
+                if (result.size() > 0)
+                    zmi.updateTimestamp();
             } catch (InterpreterException exception) {
                 exception.printStackTrace();
             }
@@ -165,8 +167,6 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         for (QueryInformation query : getQueries().values()) {
             executeQueries(root, query.getQuery());
         }
-        Message scheduleQueriesMsg = new ScheduledMessage(new ExecuteQueriesMessage(), QUERY_EVAL_FREQ);
-        scheduleQueriesMsg.setReceiverQueueName(ZMIHolderModule.moduleID);
     }
 
     public static HashMap<ZMI, List<QueryResult>> getResultsForNonSingletonZMIs(ZMI zmi, String query) {
@@ -281,6 +281,24 @@ public class ZMIHolderModule extends Module implements MessageHandler {
             zmi.getAttributes().remove(attr);
             for (ZMI son : zmi.getSons()) {
                 removeAttributeFromAllNonSingletonZMIs(son, attr);
+            }
+        }
+    }
+
+    private void updateQueries(HashMap<Attribute, QueryInformation> newQueries) {
+        if (newQueries != null) {
+            for (Map.Entry<Attribute, QueryInformation> e : newQueries.entrySet()) {
+                if (queries.get(e.getKey()) == null) {
+                    QueryInformation insertedQuery = e.getValue();
+                    insertedQuery.updateTimestamp();
+                    queries.put(e.getKey(), insertedQuery);
+                } else {
+                    if (queries.get(e.getKey()).getTimestamp() < e.getValue().getTimestamp()) {
+                        QueryInformation insertedQuery = e.getValue();
+                        insertedQuery.updateTimestamp();
+                        queries.put(e.getKey(), insertedQuery);
+                    }
+                }
             }
         }
     }
@@ -432,7 +450,8 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         Message ret = new GetZMIGossipInfoResponseMessage(
                 gossipLevel,
                 relevantZmis,
-                getFallbackContactsForPath(new PathName(gossipLevel))
+                getFallbackContactsForPath(new PathName(gossipLevel)),
+                queries
         );
         ret.setReceiverHostname(msg.getSenderHostname());
         ret.setReceiverQueueName(msg.getSenderQueueName());
@@ -495,6 +514,8 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         }
 
         System.out.println(moduleID + ": Updated ZMI " + pathToZmi);
+
+        updateQueries(msg.queries);
 
         // Update current ZMI info
         try {
