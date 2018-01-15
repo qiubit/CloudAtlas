@@ -12,7 +12,6 @@ import pl.edu.mimuw.cloudatlas.model.*;
 import java.io.ByteArrayInputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.file.Path;
 import java.security.InvalidParameterException;
 import java.text.ParseException;
 import java.util.*;
@@ -394,13 +393,20 @@ public class ZMIHolderModule extends Module implements MessageHandler {
 
         PathName fatherPath = new PathName(gossipLevel).levelUp();
         ZMI father = pathToZmi.get(fatherPath.toString());
+        if (father == null) {
+            System.out.println(moduleID + ": Invalid data for GetZMIGossipInfoRequestMessage - parent not present in tree");
+            return null;
+        }
         Integer fatherLevel = fatherPath.getComponents().size();
-        if (fatherLevel >= rootSelfZmiIndices.size())
+        if (fatherLevel >= rootSelfZmiIndices.size()) {
+            System.out.println(moduleID + ": Invalid data for GetZMIGossipInfoRequestMessage - sibling not present in tree");
             return null;
-        ZMI child = father.getSons().get(rootSelfZmiIndices.get(fatherLevel));
-        ZMI current = child;
-        if (current == null)
+        }
+        ZMI current = father.getSons().get(rootSelfZmiIndices.get(fatherLevel));
+        if (current == null) {
+            System.out.println(moduleID + ": Invalid data for GetZMIGossipInfoRequestMessage - sibling not present in tree");
             return null;
+        }
         while (current != root) {
             String curPath = zmiFullPaths.get(current);
             List<ZMI> curLevelSiblings = new ArrayList<>();
@@ -434,7 +440,7 @@ public class ZMIHolderModule extends Module implements MessageHandler {
             current = current.getSons().get(this.rootSelfZmiIndices.get(nextIdx));
             nextIdx++;
         }
-        return current.getSons().get(nextIdx);
+        return current.getSons().get(this.rootSelfZmiIndices.get(nextIdx));
     }
 
     @Override
