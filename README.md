@@ -1,6 +1,13 @@
 ### Agent
 
-To run agent you need to install and run Redis: https://redis.io/topics/
+Install and run rabbitmq-server
+
+```sh
+$ sudo apt-get install rabbitmq-server
+$ sudo service rabbitmq-server start
+```
+
+Install and run Redis: https://redis.io/topics/
 However, Redis is not needed for compiling and running Interpreter.
 
 To compile Agent, do:
