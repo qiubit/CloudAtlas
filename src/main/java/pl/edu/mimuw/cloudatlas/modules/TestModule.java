@@ -22,7 +22,6 @@ public class TestModule extends Module {
     private ZMIHolderModule zmiHolder = null;
     private FetcherModule fetcher = null;
     private TimerModule module = null;
-    private GossipModule gossip = null;
 
     public TestModule() throws Exception {
         super(moduleID);
@@ -47,7 +46,6 @@ public class TestModule extends Module {
         ZMIHolderModule zmiHolderModule = new ZMIHolderModule(testZmis.get(0), testZmis.get(1));
         FetcherModule fetcherModule = new FetcherModule();
         TimerModule timerModule = new TimerModule();
-        GossipModule gossipModule = new GossipModule();
         // testModule.test();
         // testModule.testGossipInfo();
     }
