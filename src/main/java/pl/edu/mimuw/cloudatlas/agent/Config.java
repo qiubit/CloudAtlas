@@ -6,16 +6,23 @@ import java.util.Properties;
 
 public class Config {
     public static final String ZONE_NAME = "zonepath";
+    public static final String LOCAL_IP = "localip";
 
-    private PathName zonePath;
+    private static PathName zonePath = new PathName("/bruna/24/golas");
+    private static String localIp = "localhost";
 
-    public Config(Properties prop) {
+    public static void readFromProps(Properties prop) {
         System.out.println(prop.getProperty(ZONE_NAME));
         zonePath = new PathName(prop.getProperty(ZONE_NAME));
+        localIp = prop.getProperty(LOCAL_IP);
     }
 
-    public PathName getZonePath() {
-        return this.zonePath;
+    public static PathName getZonePath() {
+        return zonePath;
+    }
+
+    public static String getLocalIp() {
+        return localIp;
     }
 
     @Override

@@ -22,19 +22,21 @@ public class NewAgent {
 
             properties.load(input);
 
-            Config config = new Config(properties);
+            Config.readFromProps(properties);
 
-            ZMIGenerator generator = new ZMIGenerator(config.getZonePath());
+            ZMIGenerator generator = new ZMIGenerator(Config.getZonePath());
             rootZmi = generator.getRootZmi();
             selfZmi = generator.getSelfZmi();
 
-            levels = config.getZonePath().getComponents().size() + 1;
+            levels = Config.getZonePath().getComponents().size() + 1;
         } else {
             ZMIGenerator generator = new ZMIGenerator(new PathName("/bruna/24/golas"));
             rootZmi = generator.getRootZmi();
             selfZmi = generator.getSelfZmi();
             levels = new PathName("/bruna/24/golas").getComponents().size() + 1;
         }
+
+        System.out.println(Config.getLocalIp());
 
         Module ZMIHolder = new ZMIHolderModule(rootZmi, selfZmi);
         Module Timer = new TimerModule();

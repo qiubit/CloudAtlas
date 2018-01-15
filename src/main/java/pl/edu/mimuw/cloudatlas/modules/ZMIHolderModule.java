@@ -438,6 +438,7 @@ public class ZMIHolderModule extends Module implements MessageHandler {
 
         // Update info
         HashMap<String, ZMI> gossippedZmi = msg.gossippedZmi;
+        System.out.println(moduleID + ": Gossipped ZMI " + gossippedZmi);
         filterGossipedZmi(gossippedZmi);
 
         for (Map.Entry<String, ZMI> e : gossippedZmi.entrySet()) {
@@ -470,6 +471,8 @@ public class ZMIHolderModule extends Module implements MessageHandler {
                 }
             }
         }
+
+        System.out.println(moduleID + ": Updated ZMI " + pathToZmi);
 
         // Update current ZMI info
         try {

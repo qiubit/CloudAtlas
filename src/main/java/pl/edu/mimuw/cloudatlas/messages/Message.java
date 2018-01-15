@@ -1,6 +1,8 @@
 package pl.edu.mimuw.cloudatlas.messages;
 
 
+import pl.edu.mimuw.cloudatlas.agent.Config;
+
 import java.io.*;
 import java.net.InetAddress;
 
@@ -17,12 +19,15 @@ public abstract class Message implements Serializable {
     public String getReceiverQueueName() { return this.receiverQueueName; }
 
     public void setSenderHostname() {
+        Config.getLocalIp();
+        /*
         try {
             this.senderHostname = InetAddress.getLocalHost().getHostAddress();
         } catch (Exception e) {
             e.printStackTrace();
             System.out.println("Message: senderHostname could not be set");
         }
+        */
     }
 
     public String getSenderHostname() {

@@ -14,6 +14,7 @@ public class DefaultConfigGenerator {
 
             // set the properties value
             prop.setProperty(Config.ZONE_NAME, "/bruna/24/golas");
+            prop.setProperty(Config.LOCAL_IP, "192.168.0.206");
 
             // save properties to project root folder
             prop.store(output, null);
