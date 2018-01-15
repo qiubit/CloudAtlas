@@ -191,4 +191,30 @@ public class ZMI implements Cloneable, Serializable {
     }
 
     public Long getTimestamp() { return this.timestamp; }
+
+    public void setTimestamp(Long timestamp) {
+        this.timestamp = timestamp;
+    }
+
+    public ArrayList<ValueContact> getContacts() {
+        ArrayList<ValueContact> ret = new ArrayList<>();
+
+        Value contactsAttr = this.attributes.getOrNull("contacts");
+        if (contactsAttr != null) {
+            Type expectedType = new TypeCollection(Type.PrimaryType.LIST, TypePrimitive.CONTACT);
+            try {
+                contactsAttr = contactsAttr.convertTo(expectedType);
+            } catch (Exception e) {
+                System.out.println("ZMI: Attribute contacts with invalid type detected");
+                e.printStackTrace();
+                return ret;
+            }
+            ValueList contactsList = (ValueList) contactsAttr;
+            for (Value contact : contactsList) {
+                ret.add((ValueContact) contact);
+            }
+        }
+
+        return  ret;
+    }
 }

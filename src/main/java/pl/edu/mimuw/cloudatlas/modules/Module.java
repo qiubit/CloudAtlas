@@ -156,6 +156,26 @@ public abstract class Module implements MessageHandler {
         return handleMessage((Message) msg);
     }
 
+    @Override
+    public Message handleMessage(GossipTransactionInitMessage msg) {
+        return handleMessage((Message) msg);
+    }
+
+    @Override
+    public Message handleMessage(GossipTransactionRemoteZMIMessage msg) {
+        return handleMessage((Message) msg);
+    }
+
+    @Override
+    public Message handleMessage(GetGossipMetadataRequestMessage msg) {
+        return handleMessage((Message) msg);
+    }
+
+    @Override
+    public Message handleMessage(GetGossipMetadataResponseMessage msg) {
+        return handleMessage((Message) msg);
+    }
+
     private class DeliveryHandler {
         private final String hostname;
 
@@ -222,7 +242,6 @@ public abstract class Module implements MessageHandler {
                             return;
                         }
                     }
-
 
                     Message response = visitMessage(message);
                     // TODO: Allow JSON response?

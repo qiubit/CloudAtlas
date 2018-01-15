@@ -22,9 +22,13 @@ public interface MessageHandler {
     Message handleMessage(GetZMIGossipInfoRequestMessage msg);
     Message handleMessage(GetZMIGossipInfoResponseMessage msg);
     Message handleMessage(GossippedZMIMessage msg);
+    Message handleMessage(GetGossipMetadataRequestMessage msg);
 
     // Gossip
     Message handleMessage(InitiateGossipMessage msg);
+    Message handleMessage(GossipTransactionInitMessage msg);
+    Message handleMessage(GossipTransactionRemoteZMIMessage msg);
+    Message handleMessage(GetGossipMetadataResponseMessage msg);
 
     // Timer
     Message handleMessage(ScheduledMessage msg);

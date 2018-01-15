@@ -12,6 +12,7 @@ import pl.edu.mimuw.cloudatlas.model.*;
 import java.io.ByteArrayInputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.file.Path;
 import java.security.InvalidParameterException;
 import java.text.ParseException;
 import java.util.*;
@@ -348,6 +349,42 @@ public class ZMIHolderModule extends Module implements MessageHandler {
     }
 
     @Override
+    public Message handleMessage(GetGossipMetadataRequestMessage msg) {
+        Integer requestedLevel = msg.requestedLevelNum;
+
+        // Discard - invalid level num
+        if (requestedLevel <= 0 || requestedLevel > rootSelfZmiIndices.size())
+            return null;
+
+        // Fetch requested level path
+        Integer currentLevel = 0;
+        PathName currentPath = new PathName("/");
+        ZMI currentZmi = root;
+        while (!currentLevel.equals(requestedLevel)) {
+            currentZmi = currentZmi.getSons().get(rootSelfZmiIndices.get(currentLevel));
+            String zmiName = currentZmi.getAttributes().get("name").toString();
+            currentPath = currentPath.levelDown(zmiName);
+            currentLevel += 1;
+        }
+
+        // Fetch contacts
+        ArrayList<ValueContact> contactsList = new ArrayList<>();
+        for (ZMI sibling : siblingZmis.computeIfAbsent(currentPath.toString(), k -> new ArrayList<>())) {
+            // TODO: Assuming all contacts in sibling are contacts for that zone. Valid?
+            contactsList.addAll(sibling.getContacts());
+        }
+        for (ValueContact contact : fallback_contacts) {
+            if (contact.getName().toString().equals(currentPath.toString())) {
+                contactsList.add(contact);
+            }
+        }
+
+        Message ret = new GetGossipMetadataResponseMessage(currentLevel, currentPath, contactsList);
+        ret.setReceiverQueueName(GossipSenderModule.moduleID);
+        return ret;
+    }
+
+    @Override
     public Message handleMessage(GetZMIGossipInfoRequestMessage msg) {
         // Fetch requested gossip level from message
         String gossipLevel = msg.requestedLevel;
@@ -356,6 +393,8 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         HashMap<String, ZMI> relevantZmis = new HashMap<>();
 
         ZMI current = pathToZmi.get(gossipLevel);
+        if (current == null)
+            return null;
         while (current != root) {
             String curPath = zmiFullPaths.get(current);
             List<ZMI> curLevelSiblings = new ArrayList<>();
@@ -369,10 +408,12 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         }
 
         Message ret = new GetZMIGossipInfoResponseMessage(
+                gossipLevel,
                 relevantZmis,
                 getFallbackContactsForPath(new PathName(gossipLevel))
         );
         ret.setReceiverHostname(msg.getSenderHostname());
+        ret.setReceiverQueueName(msg.getSenderQueueName());
 
         return ret;
     }
@@ -425,6 +466,7 @@ public class ZMIHolderModule extends Module implements MessageHandler {
                 ZMI gossippedChild = e.getValue();
                 if (gossippedChild.getTimestamp() > currentChild.getTimestamp()) {
                     currentChild.cloneAttributes(gossippedChild);
+                    currentChild.setTimestamp(gossippedChild.getTimestamp());
                 }
             }
         }

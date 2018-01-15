@@ -7,16 +7,16 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-public class GetZMIGossipInfoResponseMessage extends SerializedMessage implements Serializable {
-    public final String gossippedLevel;
-    public final HashMap<String, ZMI> relevantZMIs;
+public class GossipTransactionRemoteZMIMessage extends SerializedMessage implements Serializable {
+    public final String gossipLevel;
+    public final HashMap<String, ZMI> relevantZmis;
     public final ArrayList<ValueContact> fallbackContacts;
 
-    public GetZMIGossipInfoResponseMessage(String gossippedLevel,
-                                           HashMap<String, ZMI> relevantZMIs,
+    public GossipTransactionRemoteZMIMessage(String gossipLevel,
+                                           HashMap<String, ZMI> relevantZmis,
                                            ArrayList<ValueContact> contacts) {
-        this.gossippedLevel = gossippedLevel;
-        this.relevantZMIs = relevantZMIs;
+        this.gossipLevel = gossipLevel;
+        this.relevantZmis = relevantZmis;
         this.fallbackContacts = contacts;
     }
 

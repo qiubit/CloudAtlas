@@ -11,22 +11,36 @@ import java.util.Properties;
 
 public class NewAgent {
     public static void main(String[] args) throws Exception {
-        System.out.println("Reading config file: " + args[0]);
+        final boolean DEBUG = false;
+        ZMI rootZmi;
+        ZMI selfZmi;
+        Integer levels;
 
-        Properties properties = new Properties();
-        InputStream input = new FileInputStream(args[0]);
+        if (!DEBUG) {
+            Properties properties = new Properties();
+            InputStream input = new FileInputStream(args[0]);
 
-        properties.load(input);
+            properties.load(input);
 
-        Config config = new Config(properties);
+            Config config = new Config(properties);
 
-        ZMIGenerator generator = new ZMIGenerator(config.getZonePath());
-        ZMI rootZmi = generator.getRootZmi();
-        ZMI selfZmi = generator.getSelfZmi();
+            ZMIGenerator generator = new ZMIGenerator(config.getZonePath());
+            rootZmi = generator.getRootZmi();
+            selfZmi = generator.getSelfZmi();
+
+            levels = config.getZonePath().getComponents().size() + 1;
+        } else {
+            ZMIGenerator generator = new ZMIGenerator(new PathName("/bruna/24/golas"));
+            rootZmi = generator.getRootZmi();
+            selfZmi = generator.getSelfZmi();
+            levels = new PathName("/bruna/24/golas").getComponents().size() + 1;
+        }
 
         Module ZMIHolder = new ZMIHolderModule(rootZmi, selfZmi);
         Module Timer = new TimerModule();
         Module Fetcher = new FetcherModule();
-        Module Gossip = new GossipModule();
+        // Module Gossip = new GossipModule();
+        Module GossipSender = new GossipSenderModule(levels);
+        Module GossipReceiver = new GossipReceiverModule();
     }
 }
