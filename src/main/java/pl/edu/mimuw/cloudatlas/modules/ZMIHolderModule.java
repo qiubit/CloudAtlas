@@ -311,13 +311,23 @@ public class ZMIHolderModule extends Module implements MessageHandler {
 
     @Override
     public Message handleMessage(InstallQueryMessage msg) {
-        installQuery(msg.name, msg.query);
+        try {
+            installQuery(msg.name, msg.query);
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println(moduleID + ": Query couldn't be installed [" + msg.query + "]");
+        }
         return null;
     }
 
     @Override
     public Message handleMessage(UninstallQueryMessage msg) {
-        uninstallQuery(msg.name);
+        try {
+            uninstallQuery(msg.name);
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println(moduleID + ": Query couldn't be uninstalled [" + msg.name + "]");
+        }
         return null;
     }
 
