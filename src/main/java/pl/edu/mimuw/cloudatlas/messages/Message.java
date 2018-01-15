@@ -19,7 +19,7 @@ public abstract class Message implements Serializable {
     public String getReceiverQueueName() { return this.receiverQueueName; }
 
     public void setSenderHostname() {
-        Config.getLocalIp();
+        senderHostname = Config.getLocalIp();
         /*
         try {
             this.senderHostname = InetAddress.getLocalHost().getHostAddress();
