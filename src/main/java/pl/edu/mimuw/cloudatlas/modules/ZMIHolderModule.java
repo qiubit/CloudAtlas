@@ -392,7 +392,13 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         // This will collect all relevant ZMIs (requested level siblings + all nodes up the tree except root)
         HashMap<String, ZMI> relevantZmis = new HashMap<>();
 
-        ZMI current = pathToZmi.get(gossipLevel);
+        PathName fatherPath = new PathName(gossipLevel).levelUp();
+        ZMI father = pathToZmi.get(fatherPath.toString());
+        Integer fatherLevel = fatherPath.getComponents().size();
+        if (fatherLevel >= rootSelfZmiIndices.size())
+            return null;
+        ZMI child = father.getSons().get(rootSelfZmiIndices.get(fatherLevel));
+        ZMI current = child;
         if (current == null)
             return null;
         while (current != root) {
