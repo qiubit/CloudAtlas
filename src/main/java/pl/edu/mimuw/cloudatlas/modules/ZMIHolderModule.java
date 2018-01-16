@@ -303,6 +303,29 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         }
     }
 
+    private void updateContacts(ArrayList<ValueContact> newContacts) {
+        ArrayList<ValueContact> contactsToAdd = new ArrayList<>();
+        HashMap<PathName, HashSet<InetAddress>> pathToContactsList = new HashMap<>();
+        for (ValueContact contact : fallback_contacts) {
+            PathName name = contact.getName();
+            InetAddress address = contact.getAddress();
+            HashSet<InetAddress> contactsForZone =
+                    pathToContactsList.computeIfAbsent(name, n -> new HashSet<>());
+            contactsForZone.add(address);
+        }
+        for (ValueContact contact : newContacts) {
+            PathName name = contact.getName();
+            InetAddress address = contact.getAddress();
+            HashSet<InetAddress> contactsForZone =
+                    pathToContactsList.computeIfAbsent(name, n -> new HashSet<>());
+            if (!contactsForZone.contains(address) && pathToZmi.get(name.toString()) != null) {
+                contactsForZone.add(address);
+                contactsToAdd.add(contact);
+            }
+        }
+        fallback_contacts.addAll(contactsToAdd);
+    }
+
     @Override
     public Message handleMessage(GetAttributesRequestMessage msg) {
         ZMI zmi = pathNameToZMI(msg.zonePath);
@@ -516,6 +539,7 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         System.out.println(moduleID + ": Updated ZMI " + pathToZmi);
 
         updateQueries(msg.queries);
+        updateContacts(msg.contacts);
 
         // Update current ZMI info
         try {

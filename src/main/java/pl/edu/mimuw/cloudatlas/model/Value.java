@@ -29,6 +29,8 @@ package pl.edu.mimuw.cloudatlas.model;
  * A single value stored as an attribute.
  */
 public abstract class Value {
+    private Long timestamp = System.currentTimeMillis();
+
     /**
      * An operation that may be performed on values.
      */
@@ -237,4 +239,12 @@ public abstract class Value {
      * @return a default value of this type
      */
     public abstract Value getDefaultValue();
+
+    public Long getTimestamp() {
+        return this.timestamp;
+    }
+
+    public void updateTimestamp() {
+        this.timestamp = System.currentTimeMillis();
+    }
 }

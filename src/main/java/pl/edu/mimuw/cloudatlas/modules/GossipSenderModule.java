@@ -25,6 +25,7 @@ public class GossipSenderModule extends Module implements MessageHandler {
     private Channel remoteChannel = null;
     private HashMap<String, ZMI> remoteZmis = null;
     private HashMap<Attribute, QueryInformation> remoteQueries = null;
+    private ArrayList<ValueContact> remoteContacts = null;
 
     public enum GossipStrategy {
         GOSSIP_RANDOM,
@@ -84,6 +85,8 @@ public class GossipSenderModule extends Module implements MessageHandler {
         this.remoteConnection = null;
         this.remoteChannel = null;
         this.remoteZmis = null;
+        this.remoteQueries = null;
+        this.remoteContacts = null;
     }
 
     @Override
@@ -114,7 +117,7 @@ public class GossipSenderModule extends Module implements MessageHandler {
         }
 
         if (this.remoteZmis != null) {
-            Message localRet = new GossippedZMIMessage(this.remoteZmis, this.remoteQueries);
+            Message localRet = new GossippedZMIMessage(this.remoteZmis, this.remoteQueries, this.remoteContacts);
             localRet.setReceiverQueueName(ZMIHolderModule.moduleID);
             return localRet;
         }
@@ -132,6 +135,7 @@ public class GossipSenderModule extends Module implements MessageHandler {
         if (msg.gossipLevel.equals(gossipLevel)) {
             remoteZmis = msg.relevantZmis;
             remoteQueries = msg.queries;
+            remoteContacts = msg.fallbackContacts;
 
             Message ret = new GetZMIGossipInfoRequestMessage(gossipLevel);
             ret.setReceiverQueueName(ZMIHolderModule.moduleID);
