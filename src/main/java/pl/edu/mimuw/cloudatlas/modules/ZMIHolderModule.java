@@ -1,5 +1,6 @@
 package pl.edu.mimuw.cloudatlas.modules;
 
+import pl.edu.mimuw.cloudatlas.agent.Config;
 import pl.edu.mimuw.cloudatlas.interpreter.Interpreter;
 import pl.edu.mimuw.cloudatlas.interpreter.InterpreterException;
 import pl.edu.mimuw.cloudatlas.interpreter.QueryResult;
@@ -579,9 +580,7 @@ public class ZMIHolderModule extends Module implements MessageHandler {
 
     private static ValueContact createContact(String path, byte ip1, byte ip2, byte ip3, byte ip4)
             throws UnknownHostException {
-        return new ValueContact(new PathName(path), InetAddress.getByAddress(new byte[]{
-                ip1, ip2, ip3, ip4
-        }));
+        return new ValueContact(new PathName(path), Config.getLocalIpInetAddr());
     }
 
     public static ZMI createTestHierarchy() throws ParseException, UnknownHostException {

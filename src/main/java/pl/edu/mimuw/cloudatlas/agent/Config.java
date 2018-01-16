@@ -2,6 +2,8 @@ package pl.edu.mimuw.cloudatlas.agent;
 
 import pl.edu.mimuw.cloudatlas.model.PathName;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Properties;
 
 public class Config {
@@ -9,7 +11,8 @@ public class Config {
     public static final String LOCAL_IP = "localip";
 
     private static PathName zonePath = new PathName("/bruna/24/golas");
-    private static String localIp = "localhost";
+    private static String localIp = "127.0.0.1";
+    private static InetAddress address = null;
 
     public static void readFromProps(Properties prop) {
         System.out.println(prop.getProperty(ZONE_NAME));
@@ -23,6 +26,19 @@ public class Config {
 
     public static String getLocalIp() {
         return localIp;
+    }
+
+    public static InetAddress getLocalIpInetAddr() {
+        if (address == null) {
+            try {
+                InetAddress resolved = InetAddress.getByName(localIp);
+                address = resolved;
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+                System.out.println("WARNING Config: Submitted local IP " + localIp + " could not be resolved");
+            }
+        }
+        return address;
     }
 
     @Override

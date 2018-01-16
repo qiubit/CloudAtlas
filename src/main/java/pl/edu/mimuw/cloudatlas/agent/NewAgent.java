@@ -6,7 +6,6 @@ import pl.edu.mimuw.cloudatlas.modules.*;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
-import java.net.InetAddress;
 import java.util.Properties;
 
 public class NewAgent {
@@ -37,6 +36,7 @@ public class NewAgent {
         }
 
         System.out.println(Config.getLocalIp());
+        Config.getLocalIpInetAddr();
 
         Module ZMIHolder = new ZMIHolderModule(rootZmi, selfZmi);
         Module Timer = new TimerModule();
