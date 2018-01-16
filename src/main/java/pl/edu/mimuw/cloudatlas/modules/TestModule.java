@@ -123,7 +123,7 @@ public class TestModule extends Module {
             throw new Exception("Test: No response in testGossipInfo");
         }
         System.out.println(((GetZMIGossipInfoResponseMessage) response).relevantZMIs);
-        System.out.println(((GetZMIGossipInfoResponseMessage) response).fallbackContacts);
+        System.out.println(((GetZMIGossipInfoResponseMessage) response).contacts);
     }
 
     @Override

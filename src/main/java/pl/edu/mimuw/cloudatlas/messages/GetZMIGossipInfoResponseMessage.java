@@ -6,22 +6,24 @@ import pl.edu.mimuw.cloudatlas.model.ValueContact;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
 
 import java.io.Serializable;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 public class GetZMIGossipInfoResponseMessage extends SerializedMessage implements Serializable {
     public final String gossippedLevel;
     public final HashMap<String, ZMI> relevantZMIs;
-    public final ArrayList<ValueContact> fallbackContacts;
+    public final HashMap<String, HashSet<InetAddress>> contacts;
     public final HashMap<Attribute, QueryInformation> queries;
 
     public GetZMIGossipInfoResponseMessage(String gossippedLevel,
                                            HashMap<String, ZMI> relevantZMIs,
-                                           ArrayList<ValueContact> contacts,
+                                           HashMap<String, HashSet<InetAddress>> contacts,
                                            HashMap<Attribute, QueryInformation> queries) {
         this.gossippedLevel = gossippedLevel;
         this.relevantZMIs = relevantZMIs;
-        this.fallbackContacts = contacts;
+        this.contacts = contacts;
         this.queries = queries;
     }
 

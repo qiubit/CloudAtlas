@@ -5,10 +5,10 @@ import pl.edu.mimuw.cloudatlas.model.ValueContact;
 import java.io.Serializable;
 import java.util.ArrayList;
 
-public class SetFallbackContactsMessage extends SerializedMessage implements Serializable {
+public class SetContactsMessage extends SerializedMessage implements Serializable {
     public final ArrayList<ValueContact> new_contacts;
 
-    public SetFallbackContactsMessage(ArrayList<ValueContact> new_contacts) {
+    public SetContactsMessage(ArrayList<ValueContact> new_contacts) {
         this.new_contacts = new_contacts;
     }
 

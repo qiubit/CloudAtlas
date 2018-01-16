@@ -25,12 +25,13 @@ public class ZMIHolderModule extends Module implements MessageHandler {
 
     private ZMI root;
     private ZMI self;
-    private ArrayList<ValueContact> fallback_contacts = new ArrayList<>();
+
     private HashMap<Attribute, QueryInformation> queries = new HashMap<>();
     private HashSet<String> gossipLevels = new HashSet<>();
     private HashMap<String, ZMI> pathToZmi = new HashMap<>();
     private HashMap<String, List<ZMI>> siblingZmis = new HashMap<>();
     private HashMap<ZMI, String> zmiFullPaths = new HashMap<>();
+    private HashMap<String, HashSet<InetAddress>> contacts = new HashMap<>();
 
     // Indices leading from root to self
     private final ArrayList<Integer> rootSelfZmiIndices;
@@ -75,7 +76,7 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         if (this.root.getFather() != null)
             throw new IllegalArgumentException("Root father should be null");
 
-        ArrayList<ValueContact> defaultFallback = new ArrayList<>();
+        HashMap<String, HashSet<InetAddress>> defaultContacts = new HashMap<>();
         this.rootSelfZmiIndices = computeRootSelfPathNames(root, self);
         int nextIdx = 0;
 
@@ -84,7 +85,8 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         PathName curPath = new PathName("/");
         while (current != null) {
             // current ZMI metadata update
-            defaultFallback.add(createContact(curPath.toString(), (byte) 127, (byte) 0, (byte) 0, (byte) 1));
+            defaultContacts.put(curPath.toString(), new HashSet<>());
+            defaultContacts.get(curPath.toString()).add(Config.getLocalIpInetAddr());
             this.pathToZmi.put(curPath.toString(), current);
             this.siblingZmis.put(curPath.toString(), new ArrayList<>());
             this.zmiFullPaths.put(current, curPath.toString());
@@ -117,7 +119,7 @@ public class ZMIHolderModule extends Module implements MessageHandler {
             }
         }
 
-        this.fallback_contacts = defaultFallback;
+        this.contacts = defaultContacts;
 
         evaluateAllQueries();
     }
@@ -126,14 +128,8 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         return new HashMap<>(queries);
     }
 
-    private ArrayList<ValueContact> getFallbackContactsForPath(PathName path) {
-        ArrayList<ValueContact> ret = new ArrayList<>();
-        for (ValueContact contact : this.fallback_contacts) {
-            if (contact.getName().equals(path)) {
-                ret.add(contact);
-            }
-        }
-        return ret;
+    private HashSet<InetAddress> getFallbackContactsForPath(PathName path) {
+        return contacts.get(path.toString());
     }
 
     private void executeQueries(ZMI zmi, String query) throws Exception {
@@ -195,12 +191,16 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         }
     }
 
-    public ArrayList<ValueContact> getFallbackContacts() {
-        return fallback_contacts;
+    public HashMap<String, HashSet<InetAddress>> getContacts() {
+        return contacts;
     }
 
-    private void setFallbackContacts(ArrayList<ValueContact> new_contacts) {
-        fallback_contacts = new ArrayList<>(new_contacts);
+    private void setContactsFromRest(ArrayList<ValueContact> newContacts) {
+        for (ValueContact contact : newContacts) {
+            if (contacts.get(contact.getName().toString()) != null) {
+                contacts.get(contact.getName().toString()).add(contact.getAddress());
+            }
+        }
     }
 
     private PathName getPathName(ZMI zmi) {
@@ -236,6 +236,20 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         for (ZMI son : zmi.getSons()) {
             _getAvailableZones(son, zones);
         }
+    }
+
+    private PathName remoteToLocalPath(PathName remotePath) {
+        if (pathToZmi.get(remotePath.toString()) != null)
+            return remotePath;
+        PathName fatherPath = remotePath.levelUp();
+        if (pathToZmi.get(fatherPath.toString()) == null)
+            return null;
+        ZMI father = pathToZmi.get(fatherPath.toString());
+        if (father.getSons().size() == 0)
+            return null;
+        ZMI child = father.getSons().get(rootSelfZmiIndices.get(fatherPath.getComponents().size()));
+        String childName = child.getAttributes().get("name").toString();
+        return fatherPath.levelDown(childName);
     }
 
     private void installQuery(Attribute name, String query) {
@@ -304,27 +318,15 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         }
     }
 
-    private void updateContacts(ArrayList<ValueContact> newContacts) {
-        ArrayList<ValueContact> contactsToAdd = new ArrayList<>();
-        HashMap<PathName, HashSet<InetAddress>> pathToContactsList = new HashMap<>();
-        for (ValueContact contact : fallback_contacts) {
-            PathName name = contact.getName();
-            InetAddress address = contact.getAddress();
-            HashSet<InetAddress> contactsForZone =
-                    pathToContactsList.computeIfAbsent(name, n -> new HashSet<>());
-            contactsForZone.add(address);
-        }
-        for (ValueContact contact : newContacts) {
-            PathName name = contact.getName();
-            InetAddress address = contact.getAddress();
-            HashSet<InetAddress> contactsForZone =
-                    pathToContactsList.computeIfAbsent(name, n -> new HashSet<>());
-            if (!contactsForZone.contains(address) && pathToZmi.get(name.toString()) != null) {
-                contactsForZone.add(address);
-                contactsToAdd.add(contact);
+    private void updateContacts(HashMap<String, HashSet<InetAddress>> newContacts) {
+        for (Map.Entry<String, HashSet<InetAddress>> e : newContacts.entrySet()) {
+            PathName localPath = remoteToLocalPath(new PathName(e.getKey()));
+            if (localPath != null) {
+                HashSet<InetAddress> localContacts =
+                        contacts.computeIfAbsent(localPath.toString(), k -> new HashSet<>());
+                localContacts.addAll(e.getValue());
             }
         }
-        fallback_contacts.addAll(contactsToAdd);
     }
 
     @Override
@@ -334,8 +336,14 @@ public class ZMIHolderModule extends Module implements MessageHandler {
     }
 
     @Override
-    public Message handleMessage(GetFallbackContactsRequestMessage msg) {
-        return new GetFallbackContactsResponseMessage(fallback_contacts);
+    public Message handleMessage(GetContactsRequestMessage msg) {
+        ArrayList<ValueContact> ret = new ArrayList<>();
+        for (Map.Entry<String, HashSet<InetAddress>> e : contacts.entrySet()) {
+            for (InetAddress addr : e.getValue()) {
+                ret.add(new ValueContact(new PathName(e.getKey()), addr));
+            }
+        }
+        return new GetContactsResponseMessage(ret);
     }
 
     @Override
@@ -374,8 +382,8 @@ public class ZMIHolderModule extends Module implements MessageHandler {
     }
 
     @Override
-    public Message handleMessage(SetFallbackContactsMessage msg) {
-        setFallbackContacts(msg.new_contacts);
+    public Message handleMessage(SetContactsMessage msg) {
+        setContactsFromRest(msg.new_contacts);
         return null;
     }
 
@@ -419,16 +427,7 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         }
 
         // Fetch contacts
-        ArrayList<ValueContact> contactsList = new ArrayList<>();
-        for (ZMI sibling : siblingZmis.computeIfAbsent(currentPath.toString(), k -> new ArrayList<>())) {
-            // TODO: Assuming all contacts in sibling are contacts for that zone. Valid?
-            contactsList.addAll(sibling.getContacts());
-        }
-        for (ValueContact contact : fallback_contacts) {
-            if (contact.getName().toString().equals(currentPath.toString())) {
-                contactsList.add(contact);
-            }
-        }
+        HashSet<InetAddress> contactsList = new HashSet<>(contacts.get(currentPath.toString()));
 
         Message ret = new GetGossipMetadataResponseMessage(currentLevel, currentPath, contactsList);
         ret.setReceiverQueueName(GossipSenderModule.moduleID);
@@ -474,7 +473,7 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         Message ret = new GetZMIGossipInfoResponseMessage(
                 gossipLevel,
                 relevantZmis,
-                getFallbackContactsForPath(new PathName(gossipLevel)),
+                contacts,
                 queries
         );
         ret.setReceiverHostname(msg.getSenderHostname());

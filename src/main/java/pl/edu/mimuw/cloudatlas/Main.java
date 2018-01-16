@@ -56,6 +56,7 @@ public class Main {
     private static ZMI root;
 
     public static void main(String[] args) throws Exception {
+        /*
         root = createTestHierarchy();
         System.out.println(root.getSons().get(0).getSons().toString());
         Scanner scanner = new Scanner(System.in);
@@ -63,6 +64,11 @@ public class Main {
         while (scanner.hasNext())
             executeQueries(root, scanner.next());
         scanner.close();
+        */
+        InetAddress address1 = InetAddress.getByName("127.0.0.1");
+        InetAddress address2 = InetAddress.getByName("127.0.0.1");
+        System.out.println(address1.getHostAddress());
+        System.out.println(address2.getHostAddress());
     }
 
     private static PathName getPathName(ZMI zmi) {

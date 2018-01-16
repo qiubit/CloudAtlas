@@ -7,7 +7,6 @@ import java.io.*;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
@@ -52,12 +51,12 @@ public abstract class Module implements MessageHandler {
     }
 
     @Override
-    public Message handleMessage(GetFallbackContactsRequestMessage msg) {
+    public Message handleMessage(GetContactsRequestMessage msg) {
         return handleMessage((Message) msg);
     }
 
     @Override
-    public Message handleMessage(GetFallbackContactsResponseMessage msg) {
+    public Message handleMessage(GetContactsResponseMessage msg) {
         return handleMessage((Message) msg);
     }
 
@@ -102,7 +101,7 @@ public abstract class Module implements MessageHandler {
     }
 
     @Override
-    public Message handleMessage(SetFallbackContactsMessage msg) {
+    public Message handleMessage(SetContactsMessage msg) {
         return handleMessage((Message) msg);
     }
 

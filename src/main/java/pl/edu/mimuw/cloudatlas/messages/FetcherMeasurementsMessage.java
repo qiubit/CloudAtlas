@@ -25,6 +25,7 @@ public class FetcherMeasurementsMessage extends JsonMessage {
         measurementToType.put("free_swap", TypePrimitive.DOUBLE);
         measurementToType.put("cpu_load", TypePrimitive.DOUBLE);
         measurementToType.put("free_ram", TypePrimitive.DOUBLE);
+        measurementToType.put("num_cores", TypePrimitive.DOUBLE);
 
         measurementToType.put("total_swap_avg", TypePrimitive.DOUBLE);
         measurementToType.put("total_disk_avg", TypePrimitive.DOUBLE);

@@ -7,8 +7,10 @@ import pl.edu.mimuw.cloudatlas.model.QueryInformation;
 import pl.edu.mimuw.cloudatlas.model.ValueContact;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
 
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class GossipSenderModule extends Module implements MessageHandler {
@@ -25,7 +27,7 @@ public class GossipSenderModule extends Module implements MessageHandler {
     private Channel remoteChannel = null;
     private HashMap<String, ZMI> remoteZmis = null;
     private HashMap<Attribute, QueryInformation> remoteQueries = null;
-    private ArrayList<ValueContact> remoteContacts = null;
+    private HashMap<String, HashSet<InetAddress>> remoteContacts = null;
 
     public enum GossipStrategy {
         GOSSIP_RANDOM,
@@ -97,7 +99,7 @@ public class GossipSenderModule extends Module implements MessageHandler {
             Message remoteRet = new GossipTransactionRemoteZMIMessage(
                     gossipLevel,
                     msg.relevantZMIs,
-                    msg.fallbackContacts,
+                    msg.contacts,
                     msg.queries
             );
             remoteRet.setSenderHostname();
@@ -135,7 +137,7 @@ public class GossipSenderModule extends Module implements MessageHandler {
         if (msg.gossipLevel.equals(gossipLevel)) {
             remoteZmis = msg.relevantZmis;
             remoteQueries = msg.queries;
-            remoteContacts = msg.fallbackContacts;
+            remoteContacts = msg.contacts;
 
             Message ret = new GetZMIGossipInfoRequestMessage(gossipLevel);
             ret.setReceiverQueueName(ZMIHolderModule.moduleID);
@@ -158,8 +160,8 @@ public class GossipSenderModule extends Module implements MessageHandler {
 
         System.out.println(moduleID + ": contacts received - " + msg.contacts + " [" + this.gossipLevel + " " + this.gossipLevelNum + "]");
         ArrayList<Address> addressesList = new ArrayList<>();
-        for (ValueContact contact : msg.contacts) {
-            addressesList.add(new Address(contact.getAddress().getHostAddress()));
+        for (InetAddress addr : msg.contacts) {
+            addressesList.add(new Address(addr.getHostAddress()));
         }
         Address[] addresses = new Address[addressesList.size()];
         addresses = addressesList.toArray(addresses);

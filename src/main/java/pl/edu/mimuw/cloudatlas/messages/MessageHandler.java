@@ -6,15 +6,15 @@ public interface MessageHandler {
     // Agent communication messages (Serialized)
     Message handleMessage(GetAttributesRequestMessage msg);
     Message handleMessage(GetAttributesResponseMessage msg);
-    Message handleMessage(GetFallbackContactsRequestMessage msg);
-    Message handleMessage(GetFallbackContactsResponseMessage msg);
+    Message handleMessage(GetContactsRequestMessage msg);
+    Message handleMessage(GetContactsResponseMessage msg);
     Message handleMessage(GetQueriesRequestMessage msg);
     Message handleMessage(GetQueriesResponseMessage msg);
     Message handleMessage(GetZonesRequestMessage msg);
     Message handleMessage(GetZonesResponseMessage msg);
     Message handleMessage(InstallQueryMessage msg);
     Message handleMessage(UninstallQueryMessage msg);
-    Message handleMessage(SetFallbackContactsMessage msg);
+    Message handleMessage(SetContactsMessage msg);
     Message handleMessage(SetAttributeMessage msg);
     Message handleMessage(ExecuteQueriesMessage msg);
     Message handleMessage(GetZMILevelsRequestMessage msg);

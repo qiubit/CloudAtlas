@@ -4,14 +4,16 @@ import pl.edu.mimuw.cloudatlas.model.PathName;
 import pl.edu.mimuw.cloudatlas.model.ValueContact;
 
 import java.io.Serializable;
+import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.HashSet;
 
 public class GetGossipMetadataResponseMessage extends SerializedMessage implements Serializable {
     public final Integer levelNum;
     public final PathName levelPath;
-    public final ArrayList<ValueContact> contacts;
+    public final HashSet<InetAddress> contacts;
 
-    public GetGossipMetadataResponseMessage(Integer levelNum, PathName levelPath, ArrayList<ValueContact> contacts) {
+    public GetGossipMetadataResponseMessage(Integer levelNum, PathName levelPath, HashSet<InetAddress> contacts) {
         this.levelNum = levelNum;
         this.levelPath = levelPath;
         this.contacts = contacts;

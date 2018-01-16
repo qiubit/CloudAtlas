@@ -5,8 +5,6 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -15,10 +13,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import com.rabbitmq.client.*;
-import org.slf4j.Logger;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import pl.edu.mimuw.cloudatlas.agent.AgentApi;
 import org.springframework.web.bind.annotation.*;
 import pl.edu.mimuw.cloudatlas.messages.*;
 import pl.edu.mimuw.cloudatlas.model.*;
@@ -302,7 +298,7 @@ public class ZonesController {
     @RequestMapping(value="/set_fallback",  method= RequestMethod.POST)
     public ResponseEntity<String> setFallback(@RequestBody @Valid FallbackContactsRequest fallbackRequest) {
         try {
-            sendMessage(new SetFallbackContactsMessage(new ArrayList<>(
+            sendMessage(new SetContactsMessage(new ArrayList<>(
                     fallbackRequest.getContacts().stream().map(
                             elem -> new ValueContact(new PathName(elem.getName()), elem.getAddress())
                     ).collect(Collectors.toList()))), -1L);
@@ -322,9 +318,9 @@ public class ZonesController {
 
         try {
             Application.log.info("Sending /get_fallback message to RabbitMQ");
-            sendMessage(new GetFallbackContactsRequestMessage(), msgId);
-            GetFallbackContactsResponseMessage msg =
-                    (GetFallbackContactsResponseMessage) this.responseQueue.get(msgId).poll(5000, TimeUnit.MILLISECONDS);
+            sendMessage(new GetContactsRequestMessage(), msgId);
+            GetContactsResponseMessage msg =
+                    (GetContactsResponseMessage) this.responseQueue.get(msgId).poll(5000, TimeUnit.MILLISECONDS);
             this.responseQueue.remove(msgId);
             Application.log.info("Got /get_fallback RabbitMQ response");
             if (msg == null) {
