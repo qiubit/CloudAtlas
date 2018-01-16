@@ -1,6 +1,7 @@
 package pl.edu.mimuw.cloudatlas.modules;
 
 import com.rabbitmq.client.*;
+import pl.edu.mimuw.cloudatlas.agent.Config;
 import pl.edu.mimuw.cloudatlas.messages.*;
 import pl.edu.mimuw.cloudatlas.model.Attribute;
 import pl.edu.mimuw.cloudatlas.model.QueryInformation;
@@ -161,38 +162,42 @@ public class GossipSenderModule extends Module implements MessageHandler {
         System.out.println(moduleID + ": contacts received - " + msg.contacts + " [" + this.gossipLevel + " " + this.gossipLevelNum + "]");
         ArrayList<Address> addressesList = new ArrayList<>();
         for (InetAddress addr : msg.contacts) {
-            addressesList.add(new Address(addr.getHostAddress()));
+            // Do not gossip with yourself
+            if (!addr.equals(Config.getLocalIpInetAddr()))
+                addressesList.add(new Address(addr.getHostAddress()));
         }
         Address[] addresses = new Address[addressesList.size()];
         addresses = addressesList.toArray(addresses);
 
-        boolean communicationFail = false;
-        ConnectionFactory factory = new ConnectionFactory();
-        factory.setUsername("cloudatlas");
-        factory.setPassword("cloudatlas");
-        try {
-            Message toSend = new GossipTransactionInitMessage(this.gossipLevel);
-            toSend.setSenderHostname();
+        if (addresses.length > 0) {
+            boolean communicationFail = false;
+            ConnectionFactory factory = new ConnectionFactory();
+            factory.setUsername("cloudatlas");
+            factory.setPassword("cloudatlas");
+            try {
+                Message toSend = new GossipTransactionInitMessage(this.gossipLevel);
+                toSend.setSenderHostname();
 
-            remoteConnection = factory.newConnection(addresses);
-            remoteChannel = remoteConnection.createChannel();
+                remoteConnection = factory.newConnection(addresses);
+                remoteChannel = remoteConnection.createChannel();
 
-            remoteHostname = this.remoteChannel.getConnection().getAddress().getHostAddress();
-            System.out.println(moduleID + ": gossipping with " + remoteHostname);
-            remoteChannel.queueDeclare(GossipReceiverModule.moduleID, false, false, false, null);
+                remoteHostname = this.remoteChannel.getConnection().getAddress().getHostAddress();
+                System.out.println(moduleID + ": gossipping with " + remoteHostname);
+                remoteChannel.queueDeclare(GossipReceiverModule.moduleID, false, false, false, null);
 
-            AMQP.BasicProperties props = new AMQP.BasicProperties.Builder()
-                    .replyTo(GossipSenderModule.moduleID)
-                    .contentType(Module.SERIALIZED_TYPE)
-                    .build();
-            remoteChannel.basicPublish("", GossipReceiverModule.moduleID, props, toSend.toBytes());
-        } catch (Exception e) {
-            e.printStackTrace();
-            communicationFail = true;
-        }
+                AMQP.BasicProperties props = new AMQP.BasicProperties.Builder()
+                        .replyTo(GossipSenderModule.moduleID)
+                        .contentType(Module.SERIALIZED_TYPE)
+                        .build();
+                remoteChannel.basicPublish("", GossipReceiverModule.moduleID, props, toSend.toBytes());
+            } catch (Exception e) {
+                e.printStackTrace();
+                communicationFail = true;
+            }
 
-        if (communicationFail) {
-            System.out.println("Gossip: Gossip fail, will reinitialize automatically soon...");
+            if (communicationFail) {
+                System.out.println("Gossip: Gossip fail, will reinitialize automatically soon...");
+            }
         }
 
         return null;

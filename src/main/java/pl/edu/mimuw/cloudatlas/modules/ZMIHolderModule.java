@@ -22,6 +22,7 @@ public class ZMIHolderModule extends Module implements MessageHandler {
 
     public static final String moduleID = "ZMIHolder";
     private final long QUERY_EVAL_FREQ = 5000;
+    private final long ZMI_TIMEOUT = 20000L;
 
     private ZMI root;
     private ZMI self;
@@ -32,6 +33,7 @@ public class ZMIHolderModule extends Module implements MessageHandler {
     private HashMap<String, List<ZMI>> siblingZmis = new HashMap<>();
     private HashMap<ZMI, String> zmiFullPaths = new HashMap<>();
     private HashMap<String, HashSet<InetAddress>> contacts = new HashMap<>();
+    private HashSet<ZMI> rootSelfPathZmis = new HashSet<>();
 
     // Indices leading from root to self
     private final ArrayList<Integer> rootSelfZmiIndices;
@@ -121,7 +123,17 @@ public class ZMIHolderModule extends Module implements MessageHandler {
 
         this.contacts = defaultContacts;
 
+        computeRootSelfZmis();
         evaluateAllQueries();
+    }
+
+    private void computeRootSelfZmis() {
+        rootSelfPathZmis.add(root);
+        ZMI current = root;
+        for (Integer idx : rootSelfZmiIndices) {
+            current = current.getSons().get(idx);
+            rootSelfPathZmis.add(current);
+        }
     }
 
     public HashMap<Attribute, QueryInformation> getQueries() {
@@ -155,9 +167,34 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         for (QueryInformation query : getQueries().values()) {
             executeQueries(root, query.getQuery());
         }
-        Message scheduleQueriesMsg = new ScheduledMessage(new ExecuteQueriesMessage(), QUERY_EVAL_FREQ);
-        scheduleQueriesMsg.setReceiverQueueName(ZMIHolderModule.moduleID);
-        sendMsg(TimerModule.moduleID, "", scheduleQueriesMsg, Module.SERIALIZED_TYPE);
+        // Message scheduleQueriesMsg = new ScheduledMessage(new ExecuteQueriesMessage(), QUERY_EVAL_FREQ);
+        // scheduleQueriesMsg.setReceiverQueueName(ZMIHolderModule.moduleID);
+        // sendMsg(TimerModule.moduleID, "", scheduleQueriesMsg, Module.SERIALIZED_TYPE);
+        deleteInactiveZmis();
+    }
+
+    // TODO: May break if root-self path is not left path in ZMI tree
+    private void deleteInactiveZmis() {
+        long currentTime = System.currentTimeMillis();
+        ArrayList<String> pathsToDelete = new ArrayList<>();
+        ArrayList<ZMI> zmisToDelete = new ArrayList<>();
+        for (Map.Entry<String, ZMI> e : pathToZmi.entrySet()) {
+            if (!rootSelfPathZmis.contains(e.getValue())
+                    && currentTime - e.getValue().getTimestamp() > ZMI_TIMEOUT) {
+                pathsToDelete.add(e.getKey());
+                zmisToDelete.add(e.getValue());
+            }
+        }
+        for (ZMI z : zmisToDelete) {
+            z.getFather().removeSon(z);
+            zmiFullPaths.remove(z);
+            for (Map.Entry<String, List<ZMI>> e : siblingZmis.entrySet()) {
+                e.getValue().remove(z);
+            }
+        }
+        for (String s : pathsToDelete) {
+            pathToZmi.remove(s);
+        }
     }
 
     private void evaluateAllQueriesWithoutScheduling() throws Exception {
