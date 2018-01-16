@@ -20,7 +20,7 @@ public class GossipSenderModule extends Module implements MessageHandler {
     private final Integer LOCAL_ZMI_LEVELS;
     private final Long GOSSIP_INTERVAL = 5000L;
 
-    private GossipStrategy strategy = GossipStrategy.GOSSIP_RR;
+    private GossipStrategy strategy = GossipStrategy.GOSSIP_RANDOM_EXP;
     private Integer gossipLevelNum = null;
     private String gossipLevel = null;
     private String remoteHostname = null;
@@ -32,7 +32,8 @@ public class GossipSenderModule extends Module implements MessageHandler {
 
     public enum GossipStrategy {
         GOSSIP_RANDOM,
-        GOSSIP_RR
+        GOSSIP_RR,
+        GOSSIP_RANDOM_EXP,
     }
 
     public enum State {
@@ -205,6 +206,8 @@ public class GossipSenderModule extends Module implements MessageHandler {
 
     private Message gossipInitiator() {
         // Note: 0 is never gossipLevel as we don't gossip the root
+        if (LOCAL_ZMI_LEVELS <= 1)
+            return null;
         Integer currentGossipLevelNum = gossipLevelNum;
         if (strategy.equals(GossipStrategy.GOSSIP_RANDOM)) {
             currentGossipLevelNum = ThreadLocalRandom.current().nextInt(1, LOCAL_ZMI_LEVELS);
@@ -216,6 +219,15 @@ public class GossipSenderModule extends Module implements MessageHandler {
                 if (currentGossipLevelNum > LOCAL_ZMI_LEVELS)
                     currentGossipLevelNum = 1;
             }
+        } else if (strategy.equals(GossipStrategy.GOSSIP_RANDOM_EXP)) {
+            ArrayList<Integer> indicesToChoose = new ArrayList<>();
+            for (int level = 1; level <= LOCAL_ZMI_LEVELS; level++) {
+                for (int times = 0; times < Math.ceil(Math.pow(2, level)); times++) {
+                    indicesToChoose.add(level);
+                }
+            }
+            int idx = indicesToChoose.get(ThreadLocalRandom.current().nextInt(0, indicesToChoose.size()));
+            currentGossipLevelNum = idx;
         }
         this.gossipLevelNum = currentGossipLevelNum;
 

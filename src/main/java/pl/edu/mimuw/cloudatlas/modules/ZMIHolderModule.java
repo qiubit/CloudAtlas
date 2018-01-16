@@ -201,6 +201,7 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         for (QueryInformation query : getQueries().values()) {
             executeQueries(root, query.getQuery());
         }
+        deleteInactiveZmis();
     }
 
     public static HashMap<ZMI, List<QueryResult>> getResultsForNonSingletonZMIs(ZMI zmi, String query) {
@@ -266,6 +267,12 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         ZMI zmi = self;
         if (zmi.getSons().size() > 0) return;
         zmi.getAttributes().addOrChange(attr, value);
+        try {
+            evaluateAllQueries();
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println(moduleID + ": Query evaluation error!");
+        }
     }
 
     private void _getAvailableZones(ZMI zmi, List<PathName> zones) {
