@@ -205,7 +205,7 @@ public class GossipSenderModule extends Module implements MessageHandler {
 
     private Message gossipInitiator() {
         // Note: 0 is never gossipLevel as we don't gossip the root
-        Integer currentGossipLevelNum = null;
+        Integer currentGossipLevelNum = gossipLevelNum;
         if (strategy.equals(GossipStrategy.GOSSIP_RANDOM)) {
             currentGossipLevelNum = ThreadLocalRandom.current().nextInt(1, LOCAL_ZMI_LEVELS);
         } else if (strategy.equals(GossipStrategy.GOSSIP_RR)) {
