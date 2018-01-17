@@ -288,7 +288,7 @@ public class ZMIHolderModule extends Module implements MessageHandler {
     }
 
     private PathName remoteToLocalPath(PathName remotePath) {
-        if (gossipLevels.contains(remotePath.toString()))
+        if (gossipLevels.contains(remotePath.toString()) || remotePath.toString().equals("/"))
             return remotePath;
         PathName fatherPath = remotePath.levelUp();
         if (pathToZmi.get(fatherPath.toString()) == null)
