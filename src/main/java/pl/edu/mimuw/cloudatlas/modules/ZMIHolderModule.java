@@ -396,6 +396,7 @@ public class ZMIHolderModule extends Module implements MessageHandler {
     @Override
     public Message handleMessage(SetAttributeMessage msg) {
         setAttribute(msg.getAttribute(), msg.getValue());
+        self.updateTimestamp();
         return null;
     }
 
