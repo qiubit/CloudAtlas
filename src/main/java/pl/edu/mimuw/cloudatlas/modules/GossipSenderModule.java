@@ -20,7 +20,7 @@ public class GossipSenderModule extends Module implements MessageHandler {
     private final Integer LOCAL_ZMI_LEVELS;
     private final Long GOSSIP_INTERVAL = 5000L;
 
-    private GossipStrategy strategy = GossipStrategy.GOSSIP_RANDOM_EXP;
+    private GossipStrategy strategy = GossipStrategy.GOSSIP_RR;
     private Integer gossipLevelNum = null;
     private String gossipLevel = null;
     private String remoteHostname = null;
