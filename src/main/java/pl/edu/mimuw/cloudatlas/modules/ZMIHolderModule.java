@@ -167,9 +167,9 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         for (QueryInformation query : getQueries().values()) {
             executeQueries(root, query.getQuery());
         }
-        // Message scheduleQueriesMsg = new ScheduledMessage(new ExecuteQueriesMessage(), QUERY_EVAL_FREQ);
-        // scheduleQueriesMsg.setReceiverQueueName(ZMIHolderModule.moduleID);
-        // sendMsg(TimerModule.moduleID, "", scheduleQueriesMsg, Module.SERIALIZED_TYPE);
+        Message scheduleQueriesMsg = new ScheduledMessage(new ExecuteQueriesMessage(), QUERY_EVAL_FREQ);
+        scheduleQueriesMsg.setReceiverQueueName(ZMIHolderModule.moduleID);
+        sendMsg(TimerModule.moduleID, "", scheduleQueriesMsg, Module.SERIALIZED_TYPE);
         deleteInactiveZmis();
     }
 
@@ -267,12 +267,6 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         ZMI zmi = self;
         if (zmi.getSons().size() > 0) return;
         zmi.getAttributes().addOrChange(attr, value);
-        try {
-            evaluateAllQueries();
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.out.println(moduleID + ": Query evaluation error!");
-        }
     }
 
     private void _getAvailableZones(ZMI zmi, List<PathName> zones) {
