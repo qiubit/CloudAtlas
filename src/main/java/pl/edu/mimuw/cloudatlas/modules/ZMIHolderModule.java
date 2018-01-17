@@ -563,10 +563,12 @@ public class ZMIHolderModule extends Module implements MessageHandler {
 
         // Update info
         HashMap<String, ZMI> gossippedZmi = msg.gossippedZmi;
+        HashMap<String, HashSet<InetAddress>> gossippedContacts = msg.contacts;
+        filterGossipedZmi(gossippedZmi);
+        filterGossipedContacts(gossippedContacts);
         if (USE_GTP)
             adjustTimestamps(gossippedZmi, msg.getTimestamps(), msg.getLocalIsSender());
         System.out.println(moduleID + ": Gossipped ZMI " + gossippedZmi);
-        filterGossipedZmi(gossippedZmi);
 
         for (Map.Entry<String, ZMI> e : gossippedZmi.entrySet()) {
             // Always add ZMI in that case
@@ -602,7 +604,7 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         System.out.println(moduleID + ": Updated ZMI " + pathToZmi);
 
         updateQueries(msg.queries);
-        updateContacts(msg.contacts);
+        updateContacts(gossippedContacts);
 
         // Update current ZMI info
         try {
@@ -627,6 +629,19 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         }
         for (String s : toDelete)
             gossippedZmi.remove(s);
+    }
+
+    private void filterGossipedContacts(HashMap<String, HashSet<InetAddress>> gossippedContacts) {
+        ArrayList<String> toDelete = new ArrayList<>();
+        for (Map.Entry<String, HashSet<InetAddress>> e : gossippedContacts.entrySet()) {
+            if (!e.getKey().equals("/")) {
+                String parentPathNameStr = new PathName(e.getKey()).levelUp().toString();
+                if (pathToZmi.get(parentPathNameStr) == null)
+                    toDelete.add(e.getKey());
+            }
+        }
+        for (String s : toDelete)
+            gossippedContacts.remove(s);
     }
 
     // Root is level 0
