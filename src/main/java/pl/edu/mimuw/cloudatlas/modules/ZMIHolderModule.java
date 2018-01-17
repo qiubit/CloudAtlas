@@ -172,7 +172,8 @@ public class ZMIHolderModule extends Module implements MessageHandler {
 
     private void evaluateAllQueries() throws Exception {
         for (QueryInformation query : getQueries().values()) {
-            executeQueries(root, query.getQuery());
+            if (query.getQuery() != null)
+                executeQueries(root, query.getQuery());
         }
         Message scheduleQueriesMsg = new ScheduledMessage(new ExecuteQueriesMessage(), QUERY_EVAL_FREQ);
         scheduleQueriesMsg.setReceiverQueueName(ZMIHolderModule.moduleID);
@@ -208,7 +209,8 @@ public class ZMIHolderModule extends Module implements MessageHandler {
 
     private void evaluateAllQueriesWithoutScheduling() throws Exception {
         for (QueryInformation query : getQueries().values()) {
-            executeQueries(root, query.getQuery());
+            if (query.getQuery() != null)
+                executeQueries(root, query.getQuery());
         }
         deleteInactiveZmis();
     }
@@ -316,7 +318,9 @@ public class ZMIHolderModule extends Module implements MessageHandler {
                 zmi_results.getKey().getAttributes().add(result.getName(), result.getValue());
             }
         }
-        queries.put(name, new QueryInformation(query, result_attributes));
+        QueryInformation newQuery = new QueryInformation(query, result_attributes);
+        newQuery.updateTimestamp();
+        queries.put(name, newQuery);
     }
 
     private void uninstallQuery(Attribute name, String query) {
@@ -330,7 +334,9 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         for (Attribute attr : query_info.getAttributes()) {
             removeAttributeFromAllNonSingletonZMIs(root, attr);
         }
-        queries.remove(name);
+        QueryInformation removedQuery = new QueryInformation(null, new ArrayList<>());
+        removedQuery.updateTimestamp();
+        queries.put(name, removedQuery);
     }
 
     private static boolean anyNonSingletonZMIContainsAttribute(ZMI zmi, Attribute attr) {
@@ -455,7 +461,12 @@ public class ZMIHolderModule extends Module implements MessageHandler {
 
     @Override
     public Message handleMessage(GetQueriesRequestMessage msg) {
-        return new GetQueriesResponseMessage(new HashMap<>(queries));
+        HashMap<Attribute, QueryInformation> ret = new HashMap<>();
+        for (Map.Entry<Attribute, QueryInformation> e : queries.entrySet()) {
+            if (e.getValue().getQuery() != null)
+                ret.put(e.getKey(), e.getValue());
+        }
+        return new GetQueriesResponseMessage(ret);
     }
 
     @Override
