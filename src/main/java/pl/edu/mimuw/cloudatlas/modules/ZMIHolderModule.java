@@ -366,6 +366,9 @@ public class ZMIHolderModule extends Module implements MessageHandler {
                     queries.put(e.getKey(), insertedQuery);
                 } else {
                     if (queries.get(e.getKey()).getTimestamp() < e.getValue().getTimestamp()) {
+                        System.out.println(moduleID + ": Query " + e.getKey().getName() + " override");
+                        System.out.println("old: " + queries.get(e.getKey()).getQuery());
+                        System.out.println("new: " + e.getValue().getQuery());
                         QueryInformation insertedQuery = e.getValue();
                         insertedQuery.updateTimestamp();
                         queries.put(e.getKey(), insertedQuery);
@@ -378,6 +381,7 @@ public class ZMIHolderModule extends Module implements MessageHandler {
     private void updateContacts(HashMap<String, HashSet<InetAddress>> newContacts) {
         for (Map.Entry<String, HashSet<InetAddress>> e : newContacts.entrySet()) {
             PathName localPath = remoteToLocalPath(new PathName(e.getKey()));
+            System.out.println(moduleID + ": localPath " + localPath + " remotePath " + e.getKey());
             if (localPath != null) {
                 HashSet<InetAddress> localContacts =
                         contacts.computeIfAbsent(localPath.toString(), k -> new HashSet<>());
