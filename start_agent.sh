@@ -19,7 +19,7 @@ PID_3=$!
 # java -Djava.security.policy=./agent.policy -cp "./target/CloudAtlas-1.0-SNAPSHOT.jar:./lib/*" pl.edu.mimuw.cloudatlas.fetcher.Fetcher &
 # PID_4=$!
 sleep 5
-java -Djava.security.policy=./agent.policy -jar "./target/CloudAtlas-1.0-SNAPSHOT-spring-boot.jar" &
+java -Djava.security.policy=./agent.policy -jar "./target/CloudAtlas-1.0-SNAPSHOT-spring-boot.jar" >/dev/null &
 PID_4=$!
 sleep 5
 wait $PID_1 $PID_2 $PID_3 $PID_4
