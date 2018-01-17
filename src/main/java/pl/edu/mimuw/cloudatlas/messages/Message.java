@@ -11,6 +11,7 @@ public abstract class Message implements Serializable {
     private String senderHostname = null;
     private String receiverQueueName = null;
     private String receiverHostname = "localhost";
+    private boolean error = false;
 
     public abstract Message handle(MessageHandler m);
     public abstract byte[] toBytes() throws IOException;
@@ -28,6 +29,10 @@ public abstract class Message implements Serializable {
             System.out.println("Message: senderHostname could not be set");
         }
         */
+    }
+
+    public void setSenderHostname(String senderHostname) {
+        this.senderHostname = senderHostname;
     }
 
     public String getSenderHostname() {
@@ -61,4 +66,6 @@ public abstract class Message implements Serializable {
     public String getSenderQueueName() {
         return this.senderQueueName;
     }
+    public void setError() { error = true; }
+    public boolean isError() { return error; }
 }

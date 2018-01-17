@@ -175,6 +175,20 @@ public abstract class Module implements MessageHandler {
         return handleMessage((Message) msg);
     }
 
+    @Override
+    public Message handleMessage(SignInstallQueryRequestMessage msg) { return handleMessage((Message) msg); }
+
+    @Override
+    public Message handleMessage(SignUninstallQueryRequestMessage msg) { return handleMessage((Message) msg); }
+
+    @Override
+    public Message handleMessage(SignResponseMessage msg) { return handleMessage((Message) msg); }
+
+    @Override
+    public Message handleMessage(StatusResponseMessage msg) {
+        return handleMessage((Message) msg);
+    }
+
     private class DeliveryHandler {
         private final String hostname;
 
@@ -274,7 +288,7 @@ public abstract class Module implements MessageHandler {
                                 Connection connection;
                                 Channel channel;
 
-                                System.out.println("Module: Sending message to " + replyToHostname);
+                                System.out.println("Module: Sending message to " + replyToHostname + " queue " + replyToQueue);
 
                                 factory = new ConnectionFactory();
                                 factory.setHost(replyToHostname);

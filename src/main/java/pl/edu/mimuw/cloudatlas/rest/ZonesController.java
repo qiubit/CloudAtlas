@@ -3,13 +3,9 @@ package pl.edu.mimuw.cloudatlas.rest;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 import com.rabbitmq.client.*;
@@ -19,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import pl.edu.mimuw.cloudatlas.messages.*;
 import pl.edu.mimuw.cloudatlas.model.*;
 import pl.edu.mimuw.cloudatlas.modules.Module;
+import pl.edu.mimuw.cloudatlas.modules.SignerModule;
 import pl.edu.mimuw.cloudatlas.modules.ZMIHolderModule;
 
 import javax.validation.Valid;
@@ -62,6 +59,8 @@ class AttributeListResponse {
 }
 
 class QueryRequest {
+
+    @NotNull
     private String query;
 
     @NotNull
@@ -160,44 +159,56 @@ class ZoneList {
 
 @RestController
 public class ZonesController {
-
     private final static String QUEUE_NAME = "SpringRest";
 
-    private ConnectionFactory factory;
-    private Connection connection;
-    private Channel channel;
+    private Connection agentConnection;
+    private Connection signerConnection;
     private Consumer consumer;
 
-    private Map<Long, BlockingQueue<Message>> responseQueue = new HashMap<>();
+    private Map<Long, BlockingQueue<Message>> responseQueue = new ConcurrentHashMap<>();
+    private Object mapLock = new Object();
 
-    private long getFreeId() {
-        long id = System.currentTimeMillis();
-        while (responseQueue.get(id) != null) {
-            id = System.currentTimeMillis();
+    private long allocFreeId(BlockingQueue<Message> queue) {
+        long id;
+        while (true) {
+            synchronized (mapLock) {
+                id = System.currentTimeMillis();
+                if (responseQueue.get(id) == null) {
+                    responseQueue.put(id, queue);
+                    break;
+                }
+            }
         }
         return id;
     }
 
-    private void sendMessage(Message msg, Long id) throws IOException {
-        channel = connection.createChannel();
-        channel.queueDeclare(ZMIHolderModule.moduleID, false, false, false, null);
+    private void sendMessage(Connection connection, String moduleID, Message msg, Long id) throws IOException {
+        Channel channel = connection.createChannel();
+        channel.queueDeclare(moduleID, false, false, false, null);
+        msg.setSenderHostname(Application.localIP);
         AMQP.BasicProperties props = new AMQP.BasicProperties
                 .Builder()
                 .replyTo(QUEUE_NAME)
                 .contentType(Module.SERIALIZED_TYPE)
                 .correlationId(id.toString())
                 .build();
-        channel.basicPublish("", ZMIHolderModule.moduleID, props, msg.toBytes());
+        channel.basicPublish("", moduleID, props, msg.toBytes());
     }
 
     public ZonesController() {
-        factory = new ConnectionFactory();
-        factory.setHost("localhost");
 
         try {
-            connection = factory.newConnection();
-            channel = connection.createChannel();
+            ConnectionFactory factory = new ConnectionFactory();
+            factory.setUsername("cloudatlas");
+            factory.setPassword("cloudatlas");
+            factory.setHost("localhost");
+            agentConnection = factory.newConnection();
+            Channel channel = agentConnection.createChannel();
             channel.queueDeclare(QUEUE_NAME, false, false, false, null);
+
+            factory.setHost(Application.signerIP);
+            signerConnection = factory.newConnection();
+
             Application.log.info("Running RabbitMQ consumer");
             consumer = new DefaultConsumer(channel) {
                 @Override
@@ -246,7 +257,25 @@ public class ZonesController {
     public ResponseEntity<String> installQuery(@RequestBody @Valid QueryRequest queryRequest) {
         try {
             Application.log.info("Installing query " + queryRequest.getName() + ": " + queryRequest.getQuery());
-            sendMessage(new InstallQueryMessage(new Attribute(queryRequest.getName()), queryRequest.getQuery()), -1L);
+            long msgId = allocFreeId(new ArrayBlockingQueue<Message>(1));
+            Application.log.info("Sending SignInstallQuery to RabbitMQ, msgId " + msgId);
+            sendMessage(signerConnection, SignerModule.moduleID, new SignInstallQueryRequestMessage(new Query(new Attribute(queryRequest.getName()), queryRequest.getQuery())), msgId);
+            SignResponseMessage signResponse = (SignResponseMessage) this.responseQueue.get(msgId).poll(5000, TimeUnit.MILLISECONDS);
+            responseQueue.remove(msgId);
+            if (signResponse.isError()) {
+                Application.log.info("Sign query failed");
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            }
+            msgId = allocFreeId(new ArrayBlockingQueue<Message>(1));
+            sendMessage(agentConnection, ZMIHolderModule.moduleID, new InstallQueryMessage(new Query(new Attribute(queryRequest.getName()), queryRequest.getQuery()), signResponse.signature), msgId);
+            StatusResponseMessage installResponse = (StatusResponseMessage) this.responseQueue.get(msgId).poll(5000, TimeUnit.MILLISECONDS);
+            if (installResponse == null || installResponse.isError()) {
+                // rollback, we need to uninstall query from signer
+                Application.log.info("Rollback of install");
+                sendMessage(signerConnection, SignerModule.moduleID, new SignUninstallQueryRequestMessage(new Query(new Attribute(queryRequest.getName()), queryRequest.getQuery())), -1L);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            }
+
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
@@ -258,7 +287,26 @@ public class ZonesController {
     @RequestMapping(value="/uninstall_query",  method= RequestMethod.POST)
     public ResponseEntity<String> uninstallQuery(@RequestBody @Valid QueryRequest queryRequest) {
         try {
-            sendMessage(new UninstallQueryMessage(new Attribute(queryRequest.getName())), -1L);
+            Application.log.info("Uninstalling query " + queryRequest.getName() + ": " + queryRequest.getQuery());
+            long msgId = allocFreeId(new ArrayBlockingQueue<Message>(1));
+            Application.log.info("Sending SignInstallQuery to RabbitMQ, msgId " + msgId);
+            sendMessage(signerConnection, SignerModule.moduleID, new SignUninstallQueryRequestMessage(new Query(new Attribute(queryRequest.getName()), queryRequest.getQuery())), msgId);
+            SignResponseMessage signResponse = (SignResponseMessage) this.responseQueue.get(msgId).poll(5000, TimeUnit.MILLISECONDS);
+            responseQueue.remove(msgId);
+            if (signResponse == null || signResponse.isError()) {
+                Application.log.info("Sign query failed");
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            }
+            msgId = allocFreeId(new ArrayBlockingQueue<Message>(1));
+            sendMessage(agentConnection, ZMIHolderModule.moduleID, new UninstallQueryMessage(new Query(new Attribute(queryRequest.getName()), queryRequest.getQuery()), signResponse.signature), msgId);
+            StatusResponseMessage uninstallResponse = (StatusResponseMessage) this.responseQueue.get(msgId).poll(5000, TimeUnit.MILLISECONDS);
+            if (uninstallResponse == null || uninstallResponse.isError()) {
+                // rollback, we need to install query in signer
+                Application.log.info("Rollback of uninstall");
+                sendMessage(signerConnection, SignerModule.moduleID, new SignInstallQueryRequestMessage(new Query(new Attribute(queryRequest.getName()), queryRequest.getQuery())), -1L);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            }
+
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
@@ -270,15 +318,16 @@ public class ZonesController {
     @RequestMapping(value="/get_queries")
     public ResponseEntity<QueriesList> getQueries() {
         QueriesList result = new QueriesList();
-        long msgId = getFreeId();
-        this.responseQueue.put(msgId, new ArrayBlockingQueue<Message>(1));
+        long msgId = allocFreeId(new ArrayBlockingQueue<Message>(1));
         try {
             Application.log.info("Sending /get_queries to RabbitMQ, msgId " + msgId);
-            sendMessage(new GetQueriesRequestMessage(), msgId);
+            sendMessage(agentConnection, ZMIHolderModule.moduleID, new GetQueriesRequestMessage(), msgId);
             GetQueriesResponseMessage msg =
                     (GetQueriesResponseMessage) this.responseQueue.get(msgId).poll(5000, TimeUnit.MILLISECONDS);
-            if (msg == null)
+            if (msg == null) {
                 Application.log.warn("Response message is null");
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            }
             List<QueryRequest> result_list = new ArrayList<>();
             for (Map.Entry<Attribute, QueryInformation> entry : msg.queries.entrySet()) {
                 QueryRequest query_request = new QueryRequest();
@@ -298,7 +347,7 @@ public class ZonesController {
     @RequestMapping(value="/set_fallback",  method= RequestMethod.POST)
     public ResponseEntity<String> setFallback(@RequestBody @Valid FallbackContactsRequest fallbackRequest) {
         try {
-            sendMessage(new SetContactsMessage(new ArrayList<>(
+            sendMessage(agentConnection, ZMIHolderModule.moduleID, new SetContactsMessage(new ArrayList<>(
                     fallbackRequest.getContacts().stream().map(
                             elem -> new ValueContact(new PathName(elem.getName()), elem.getAddress())
                     ).collect(Collectors.toList()))), -1L);
@@ -313,18 +362,17 @@ public class ZonesController {
     @RequestMapping(value="/get_fallback")
     public ResponseEntity<FallbackContactsRequest> getFallback() {
         FallbackContactsRequest result = new FallbackContactsRequest();
-        long msgId = getFreeId();
-        this.responseQueue.put(msgId, new ArrayBlockingQueue<Message>(1));
-
+        long msgId = allocFreeId(new ArrayBlockingQueue<Message>(1));
         try {
             Application.log.info("Sending /get_fallback message to RabbitMQ");
-            sendMessage(new GetContactsRequestMessage(), msgId);
+            sendMessage(agentConnection, ZMIHolderModule.moduleID, new GetContactsRequestMessage(), msgId);
             GetContactsResponseMessage msg =
                     (GetContactsResponseMessage) this.responseQueue.get(msgId).poll(5000, TimeUnit.MILLISECONDS);
             this.responseQueue.remove(msgId);
             Application.log.info("Got /get_fallback RabbitMQ response");
             if (msg == null) {
                 Application.log.warn("/get_fallback response message is null");
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
             }
             List<ValueContact> contacts = msg.contactList;
             List<Contact> result_contacts = new ArrayList<>();
@@ -346,17 +394,17 @@ public class ZonesController {
     @RequestMapping(value="/get_attributes",  method= RequestMethod.POST)
     public ResponseEntity<AttributeListResponse> getAttributes(@RequestBody @Valid ZoneRequest zoneRequest) {
         AttributeListResponse result = new AttributeListResponse();
-        long msgId = getFreeId();
-        this.responseQueue.put(msgId, new ArrayBlockingQueue<Message>(1));
+        long msgId = allocFreeId(new ArrayBlockingQueue<Message>(1));
         try {
             Application.log.info("Sending /get_attributes message to RabbitMQ");
-            sendMessage(new GetAttributesRequestMessage(new PathName(zoneRequest.getZoneName())), msgId);
+            sendMessage(agentConnection, ZMIHolderModule.moduleID, new GetAttributesRequestMessage(new PathName(zoneRequest.getZoneName())), msgId);
             GetAttributesResponseMessage msg =
                     (GetAttributesResponseMessage) this.responseQueue.get(msgId).poll(5000, TimeUnit.MILLISECONDS);
             this.responseQueue.remove(msgId);
             Application.log.info("Got RabbitMQ response");
             if (msg == null) {
                 Application.log.warn("Response message is null");
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
             }
             AttributesMap attributes = msg.attributesMap;
             List<AttributeResponse> result_list = new ArrayList<>();
@@ -379,17 +427,17 @@ public class ZonesController {
     public ResponseEntity<ZoneList> zones() {
         ZoneList result = new ZoneList();
 
-        long msgId = getFreeId();
-        this.responseQueue.put(msgId, new ArrayBlockingQueue<Message>(1));
+        long msgId = allocFreeId(new ArrayBlockingQueue<Message>(1));
         try {
             Application.log.info("Sending /zones message to RabbitMQ");
-            sendMessage(new GetZonesRequestMessage(), msgId);
+            sendMessage(agentConnection, ZMIHolderModule.moduleID, new GetZonesRequestMessage(), msgId);
             GetZonesResponseMessage msg =
                     (GetZonesResponseMessage) this.responseQueue.get(msgId).poll(5000, TimeUnit.MILLISECONDS);
             this.responseQueue.remove(msgId);
             Application.log.info("Got RabbitMQ response");
             if (msg == null) {
                 Application.log.warn("Response message is null");
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
             }
             result.setZones(msg.zones.stream().map(elem -> elem.toString()).collect(Collectors.toList()));
         } catch (Exception e) {

@@ -7,17 +7,32 @@ $ sudo apt-get install rabbitmq-server
 $ sudo service rabbitmq-server start
 ```
 
-Install and run Redis: https://redis.io/topics/
-However, Redis is not needed for compiling and running Interpreter.
+Configure rabbitmq-server
+```sh
+$ rabbitmqctl add_user cloudatlas cloudatlas
+$ rabbitmqctl set_user_tags cloudatlas administrator
+$ rabbitmqctl set_permissions -p / cloudatlas "." "." ".*"
+```
 
 To compile Agent, do:
 ```sh
 $ mvn install
 ```
 
+Generate rsa keys for agent and signer
+```sh
+$ ./gen_keys.sh
+```
+
 To run Agent, do:
 ```sh
 $ ./start_agent.sh
+```
+
+
+To run Signer, do:
+```sh
+$ ./start_signer.sh
 ```
 
 ### Interpreter

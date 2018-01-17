@@ -8,6 +8,12 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.Properties;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.spec.X509EncodedKeySpec;
+
 public class NewAgent {
     public static void main(String[] args) throws Exception {
         final boolean DEBUG = false;
@@ -38,11 +44,20 @@ public class NewAgent {
         System.out.println(Config.getLocalIp());
         Config.getLocalIpInetAddr();
 
-        Module ZMIHolder = new ZMIHolderModule(rootZmi, selfZmi);
+        Module ZMIHolder = new ZMIHolderModule(rootZmi, selfZmi, getPublicKey(Config.getPublicKeyPath()));
         Module Timer = new TimerModule();
         Module Fetcher = new FetcherModule();
         // Module Gossip = new GossipModule();
         Module GossipSender = new GossipSenderModule(levels);
         Module GossipReceiver = new GossipReceiverModule();
+    }
+
+    public static PublicKey getPublicKey(String filename) throws Exception {
+        byte[] keyBytes = Files.readAllBytes(Paths.get(filename));
+
+        X509EncodedKeySpec spec =
+                new X509EncodedKeySpec(keyBytes);
+        KeyFactory kf = KeyFactory.getInstance("RSA");
+        return kf.generatePublic(spec);
     }
 }

@@ -9,11 +9,13 @@ import pl.edu.mimuw.cloudatlas.interpreter.query.parser;
 import pl.edu.mimuw.cloudatlas.model.ValueString;
 import pl.edu.mimuw.cloudatlas.messages.*;
 import pl.edu.mimuw.cloudatlas.model.*;
+import pl.edu.mimuw.cloudatlas.signer.QuerySigner;
 
 import java.io.ByteArrayInputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.security.InvalidParameterException;
+import java.security.PublicKey;
 import java.text.ParseException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -24,6 +26,8 @@ public class ZMIHolderModule extends Module implements MessageHandler {
     private final long QUERY_EVAL_FREQ = 5000;
     private final long ZMI_TIMEOUT = 40000L;
     private final boolean USE_GTP = true;
+
+    private PublicKey publicKey;
 
     private ZMI root;
     private ZMI self;
@@ -51,6 +55,7 @@ public class ZMIHolderModule extends Module implements MessageHandler {
             current = current.getFather();
         }
 
+
         ArrayList<Integer> computed = new ArrayList<>();
         Collections.reverse(zmiNames);
         current = root;
@@ -72,10 +77,11 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         return computed;
     }
 
-    public ZMIHolderModule(ZMI root, ZMI self) throws Exception {
+    public ZMIHolderModule(ZMI root, ZMI self, PublicKey publicKey) throws Exception {
         super(moduleID);
         this.root = root;
         this.self = self;
+        this.publicKey = publicKey;
         if (this.root.getFather() != null)
             throw new IllegalArgumentException("Root father should be null");
 
@@ -313,14 +319,18 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         queries.put(name, new QueryInformation(query, result_attributes));
     }
 
-    private void uninstallQuery(Attribute name) {
+    private void uninstallQuery(Attribute name, String query) {
         QueryInformation query_info = queries.get(name);
-        if (query_info != null) {
-            for (Attribute attr : query_info.getAttributes()) {
-                removeAttributeFromAllNonSingletonZMIs(root, attr);
-            }
-            queries.remove(name);
+        if (query_info == null) {
+            throw new InvalidParameterException("No query with such name");
         }
+        if (!query_info.getQuery().equals(query)) {
+            throw new InvalidParameterException("Uninstalled query does't match installed one");
+        }
+        for (Attribute attr : query_info.getAttributes()) {
+            removeAttributeFromAllNonSingletonZMIs(root, attr);
+        }
+        queries.remove(name);
     }
 
     private static boolean anyNonSingletonZMIContainsAttribute(ZMI zmi, Attribute attr) {
@@ -403,24 +413,38 @@ public class ZMIHolderModule extends Module implements MessageHandler {
 
     @Override
     public Message handleMessage(InstallQueryMessage msg) {
+        StatusResponseMessage response = new StatusResponseMessage();
         try {
-            installQuery(msg.name, msg.query);
+            if (!QuerySigner.verifyInstallSignature(msg.query, msg.signature, publicKey)) {
+                System.out.println("Install query verification failed");
+                response.setError();
+                return response;
+            }
+            installQuery(msg.query.name, msg.query.query);
         } catch (Exception e) {
             e.printStackTrace();
-            System.out.println(moduleID + ": Query couldn't be installed [" + msg.query + "]");
+            System.out.println(moduleID + ": Query couldn't be installed [" + msg.query.toString() + "]");
+            response.setError();
         }
-        return null;
+        return response;
     }
 
     @Override
     public Message handleMessage(UninstallQueryMessage msg) {
+        StatusResponseMessage response = new StatusResponseMessage();
         try {
-            uninstallQuery(msg.name);
+            if (!QuerySigner.verifyUninstallSignature(msg.query, msg.signature, publicKey)) {
+                System.out.println("Uninstall query verification failed");
+                response.setError();
+                return response;
+            }
+            uninstallQuery(msg.query.name, msg.query.query);
         } catch (Exception e) {
             e.printStackTrace();
-            System.out.println(moduleID + ": Query couldn't be uninstalled [" + msg.name + "]");
+            System.out.println(moduleID + ": Query couldn't be installed [" + msg.query.toString() + "]");
+            response.setError();
         }
-        return null;
+        return response;
     }
 
     @Override

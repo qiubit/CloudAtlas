@@ -4,13 +4,11 @@ import pl.edu.mimuw.cloudatlas.model.Query;
 
 import java.io.Serializable;
 
-public class UninstallQueryMessage extends SerializedMessage implements Serializable {
+public class SignInstallQueryRequestMessage extends SerializedMessage implements Serializable {
     public final Query query;
-    public final byte[] signature;
 
-    public UninstallQueryMessage(Query query, byte[] signature) {
+    public SignInstallQueryRequestMessage(Query query) {
         this.query = query;
-        this.signature = signature;
     }
 
     @Override

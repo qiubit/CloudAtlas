@@ -8,6 +8,9 @@ import pl.edu.mimuw.cloudatlas.model.PathName;
 import pl.edu.mimuw.cloudatlas.model.ValueString;
 import pl.edu.mimuw.cloudatlas.model.ZMI;
 
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.PublicKey;
 import java.sql.Time;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,6 +21,7 @@ import static pl.edu.mimuw.cloudatlas.agent.Agent.*;
 public class TestModule extends Module {
 
     public static final String moduleID = "TestModule";
+    public final KeyPair keyPair;
 
     private ZMIHolderModule zmiHolder = null;
     private FetcherModule fetcher = null;
@@ -25,6 +29,9 @@ public class TestModule extends Module {
 
     public TestModule() throws Exception {
         super(moduleID);
+        KeyPairGenerator keyGenerator = KeyPairGenerator.getInstance("RSA");
+        keyGenerator.initialize(1024);
+        keyPair = keyGenerator.generateKeyPair();
     }
 
     @Override
@@ -43,7 +50,7 @@ public class TestModule extends Module {
 
         TestModule testModule = new TestModule();
         List<ZMI> testZmis = createGossipTestZMI();
-        ZMIHolderModule zmiHolderModule = new ZMIHolderModule(testZmis.get(0), testZmis.get(1));
+        ZMIHolderModule zmiHolderModule = new ZMIHolderModule(testZmis.get(0), testZmis.get(1), testModule.keyPair.getPublic());
         FetcherModule fetcherModule = new FetcherModule();
         TimerModule timerModule = new TimerModule();
         // testModule.test();
@@ -93,10 +100,10 @@ public class TestModule extends Module {
         return res;
     }
 
-    private void testGossipInfo() throws Exception {
+    private void testGossipInfo(PublicKey publicKey) throws Exception {
         List<ZMI> testZMIs = createGossipTestZMI();
 
-        this.zmiHolder = new ZMIHolderModule(testZMIs.get(0), testZMIs.get(1));
+        this.zmiHolder = new ZMIHolderModule(testZMIs.get(0), testZMIs.get(1), this.keyPair.getPublic());
 
         if (this.zmiHolder == null) {
             throw new Exception("Test: ZMIHolder required for testGossipInfo test");
