@@ -541,12 +541,16 @@ public class ZMIHolderModule extends Module implements MessageHandler {
                                   HashMap<String, Long> timestamps,
                                   boolean localIsSender) {
         System.out.println(moduleID + ": Adjusting timestamps using GTP");
+        System.out.println(moduleID + ": tsa " + timestamps.get("tsa") + " tsb: " + timestamps.get("tsb") +
+        " tra: " + timestamps.get("tra") + " trb: " + timestamps.get("trb"));
         long rtd = (timestamps.get("tsb") - timestamps.get("tsa")) - (timestamps.get("trb") - timestamps.get("tra"));
         System.out.println(moduleID + ": rtd " + rtd);
         long dT = (long) Math.ceil(timestamps.get("trb") + 0.5 * rtd - timestamps.get("tsb"));
         System.out.println(moduleID + ": dT " + dT);
-        if (localIsSender)
+        if (localIsSender) {
+            System.out.println(moduleID + ": local is sender");
             dT = -dT;
+        }
         for (Map.Entry<String, ZMI> e : gosippedZmi.entrySet()) {
             e.getValue().setTimestamp(e.getValue().getTimestamp() + dT);
         }
