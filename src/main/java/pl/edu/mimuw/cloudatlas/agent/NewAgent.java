@@ -28,6 +28,10 @@ public class NewAgent {
             properties.load(input);
 
             Config.readFromProps(properties);
+            if (!Config.getInitOk()) {
+                throw new Exception("Invalid Config submitted");
+            }
+            Config.printConfig();
 
             ZMIGenerator generator = new ZMIGenerator(Config.getZonePath());
             rootZmi = generator.getRootZmi();

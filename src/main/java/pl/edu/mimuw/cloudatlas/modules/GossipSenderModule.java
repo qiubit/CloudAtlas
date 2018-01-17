@@ -18,7 +18,7 @@ public class GossipSenderModule extends Module implements MessageHandler {
     public static final String moduleID = "GossipSender";
 
     private final Integer LOCAL_ZMI_LEVELS;
-    private final Long GOSSIP_INTERVAL = 5000L;
+    private final Long GOSSIP_INTERVAL = Config.getGossipFreq();
 
     private GossipStrategy strategy = GossipStrategy.GOSSIP_RR;
     private Integer gossipLevelNum = null;

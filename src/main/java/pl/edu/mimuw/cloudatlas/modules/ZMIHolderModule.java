@@ -23,9 +23,9 @@ import java.util.stream.Collectors;
 public class ZMIHolderModule extends Module implements MessageHandler {
 
     public static final String moduleID = "ZMIHolder";
-    private final long QUERY_EVAL_FREQ = 5000;
-    private final long ZMI_TIMEOUT = 40000L;
-    private final boolean USE_GTP = true;
+    private final long QUERY_EVAL_FREQ = Config.getQueryEvalFreq();
+    private final long ZMI_TIMEOUT = Config.getZmiTimeout();
+    private final boolean USE_GTP = Config.getUseGtp();
 
     private PublicKey publicKey;
 
