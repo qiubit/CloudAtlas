@@ -23,6 +23,7 @@ public class ZMIHolderModule extends Module implements MessageHandler {
     public static final String moduleID = "ZMIHolder";
     private final long QUERY_EVAL_FREQ = 5000;
     private final long ZMI_TIMEOUT = 40000L;
+    private final boolean USE_GTP = false;
 
     private ZMI root;
     private ZMI self;
@@ -536,6 +537,21 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         return current.getSons().get(this.rootSelfZmiIndices.get(nextIdx));
     }
 
+    private void adjustTimestamps(HashMap<String, ZMI> gosippedZmi,
+                                  HashMap<String, Long> timestamps,
+                                  boolean localIsSender) {
+        System.out.println(moduleID + ": Adjusting timestamps using GTP");
+        long rtd = (timestamps.get("tsb") - timestamps.get("tsa")) - (timestamps.get("trb") - timestamps.get("tra"));
+        System.out.println(moduleID + ": rtd " + rtd);
+        long dT = (long) Math.ceil(timestamps.get("trb") + 0.5 * rtd - timestamps.get("tsb"));
+        System.out.println(moduleID + ": dT " + dT);
+        if (localIsSender)
+            dT = -dT;
+        for (Map.Entry<String, ZMI> e : gosippedZmi.entrySet()) {
+            e.getValue().setTimestamp(e.getValue().getTimestamp() + dT);
+        }
+    }
+
     @Override
     public Message handleMessage(GossippedZMIMessage msg) {
         // We need to rebuild entire ZMI structure based on gossippedZmi
@@ -543,6 +559,8 @@ public class ZMIHolderModule extends Module implements MessageHandler {
 
         // Update info
         HashMap<String, ZMI> gossippedZmi = msg.gossippedZmi;
+        if (USE_GTP)
+            adjustTimestamps(gossippedZmi, msg.getTimestamps(), msg.getLocalIsSender());
         System.out.println(moduleID + ": Gossipped ZMI " + gossippedZmi);
         filterGossipedZmi(gossippedZmi);
 

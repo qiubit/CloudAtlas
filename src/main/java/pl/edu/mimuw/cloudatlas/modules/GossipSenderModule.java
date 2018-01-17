@@ -30,6 +30,14 @@ public class GossipSenderModule extends Module implements MessageHandler {
     private HashMap<Attribute, QueryInformation> remoteQueries = null;
     private HashMap<String, HashSet<InetAddress>> remoteContacts = null;
 
+    /* GTP */
+    // Sender timestamps
+    private long tsa;
+    private long tsb;
+    // Receiver timestamps
+    private long tra;
+    private long trb;
+
     public enum GossipStrategy {
         GOSSIP_RANDOM,
         GOSSIP_RR,
@@ -98,7 +106,7 @@ public class GossipSenderModule extends Module implements MessageHandler {
         // Send remote ZMI to ZMIHandler, send local ZMI to remote host
         System.out.println(moduleID + ": Got local ZMI data [" + msg.gossippedLevel + "]");
         if (msg.gossippedLevel.equals(gossipLevel) && remoteChannel != null) {
-            Message remoteRet = new GossipTransactionRemoteZMIMessage(
+            GossipTransactionRemoteZMIMessage remoteRet = new GossipTransactionRemoteZMIMessage(
                     gossipLevel,
                     msg.relevantZMIs,
                     msg.contacts,
@@ -112,6 +120,7 @@ public class GossipSenderModule extends Module implements MessageHandler {
                         .Builder()
                         .contentType(Module.SERIALIZED_TYPE)
                         .build();
+                remoteRet.setTsb(tsb);
                 remoteChannel.basicPublish("", GossipReceiverModule.moduleID, props, remoteRet.toBytes());
                 remoteChannel.close();
                 System.out.println(moduleID + ": Sent local ZMI data to remote");
@@ -121,8 +130,10 @@ public class GossipSenderModule extends Module implements MessageHandler {
         }
 
         if (this.remoteZmis != null) {
-            Message localRet = new GossippedZMIMessage(this.remoteZmis, this.remoteQueries, this.remoteContacts);
+            GossippedZMIMessage localRet = new GossippedZMIMessage(this.remoteZmis, this.remoteQueries, this.remoteContacts);
             localRet.setReceiverQueueName(ZMIHolderModule.moduleID);
+            localRet.setTimestamps(tsa, tsb, tra, trb);
+            localRet.setLocalIsSender(true);
             return localRet;
         }
         return null;
@@ -130,11 +141,14 @@ public class GossipSenderModule extends Module implements MessageHandler {
 
     @Override
     public Message handleMessage(GossipTransactionRemoteZMIMessage msg) {
+        tsb = System.currentTimeMillis();
+
         // Save remote ZMI, send request for local ZMI
         System.out.println(moduleID + ": Received remote ZMI from " + msg.getSenderHostname());
 
         // GTP
-        Long t1b = System.currentTimeMillis();
+        tra = msg.getTra();
+        trb = msg.getTrb();
 
         if (msg.gossipLevel.equals(gossipLevel)) {
             remoteZmis = msg.relevantZmis;
@@ -176,7 +190,7 @@ public class GossipSenderModule extends Module implements MessageHandler {
             factory.setUsername("cloudatlas");
             factory.setPassword("cloudatlas");
             try {
-                Message toSend = new GossipTransactionInitMessage(this.gossipLevel);
+                GossipTransactionInitMessage toSend = new GossipTransactionInitMessage(this.gossipLevel);
                 toSend.setSenderHostname();
 
                 remoteConnection = factory.newConnection(addresses);
@@ -190,6 +204,10 @@ public class GossipSenderModule extends Module implements MessageHandler {
                         .replyTo(GossipSenderModule.moduleID)
                         .contentType(Module.SERIALIZED_TYPE)
                         .build();
+
+                toSend.setTsa();
+                tsa = toSend.getTsa();
+
                 remoteChannel.basicPublish("", GossipReceiverModule.moduleID, props, toSend.toBytes());
             } catch (Exception e) {
                 e.printStackTrace();

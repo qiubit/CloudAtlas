@@ -11,6 +11,14 @@ public class GossipTransaction {
     private String gossipLevel;
     private HashMap<String, ZMI> remoteZmis = null;
 
+    /* GTP */
+    // Receiver timestamps
+    public long tra;
+    public long trb;
+    // Sender timestamps
+    public long tsa;
+    public long tsb;
+
     public enum State {
         REQUESTED,
         LOCAL_ZMI_SENT,

@@ -17,6 +17,10 @@ public class GossipTransactionRemoteZMIMessage extends SerializedMessage impleme
     public final HashMap<String, HashSet<InetAddress>> contacts;
     public final HashMap<Attribute, QueryInformation> queries;
 
+    private long tra;
+    private long trb;
+    private long tsb;
+
     public GossipTransactionRemoteZMIMessage(String gossipLevel,
                                              HashMap<String, ZMI> relevantZmis,
                                              HashMap<String, HashSet<InetAddress>> contacts,
@@ -25,6 +29,34 @@ public class GossipTransactionRemoteZMIMessage extends SerializedMessage impleme
         this.relevantZmis = relevantZmis;
         this.contacts = contacts;
         this.queries = queries;
+    }
+
+    public void setTra() {
+        tra = System.currentTimeMillis();
+    }
+
+    public long getTra() {
+        return this.tra;
+    }
+
+    public void setTrb() {
+        trb = System.currentTimeMillis();
+    }
+
+    public long getTrb() {
+        return this.trb;
+    }
+
+    public void setTsb() {
+        this.tsb = System.currentTimeMillis();
+    }
+
+    public void setTsb(long tsb) {
+        this.tsb = tsb;
+    }
+
+    public long getTsb() {
+        return this.tsb;
     }
 
     @Override

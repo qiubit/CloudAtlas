@@ -44,9 +44,12 @@ public class GossipReceiverModule extends Module implements MessageHandler {
         if (transaction != null
                 && transaction.getState().equals(GossipTransaction.State.LOCAL_ZMI_SENT)
                 && transaction.getGossipLevel().equals(msg.gossipLevel)) {
-            finalizeTransaction(transaction);
-            Message toSend = new GossippedZMIMessage(msg.relevantZmis, msg.queries, msg.contacts);
+            transaction.tsb = msg.getTsb();
+            GossippedZMIMessage toSend = new GossippedZMIMessage(msg.relevantZmis, msg.queries, msg.contacts);
             toSend.setReceiverQueueName(ZMIHolderModule.moduleID);
+            toSend.setTimestamps(transaction.tsa, transaction.tsb, transaction.tra, transaction.trb);
+            toSend.setLocalIsSender(false);
+            finalizeTransaction(transaction);
             return toSend;
         } else {
             System.out.println(
@@ -69,7 +72,7 @@ public class GossipReceiverModule extends Module implements MessageHandler {
                 if (!transaction.getState().equals(GossipTransaction.State.REQUESTED))
                     continue;
                 if (conn != null) {
-                    Message msgRemote =
+                    GossipTransactionRemoteZMIMessage msgRemote =
                             new GossipTransactionRemoteZMIMessage(
                                     msg.gossippedLevel,
                                     msg.relevantZMIs,
@@ -87,6 +90,10 @@ public class GossipReceiverModule extends Module implements MessageHandler {
                                 .replyTo(GossipReceiverModule.moduleID)
                                 .contentType(Module.SERIALIZED_TYPE)
                                 .build();
+
+                        msgRemote.setTrb();
+                        transaction.trb = msgRemote.getTrb();
+
                         channel.basicPublish("", GossipSenderModule.moduleID, props, msgRemote.toBytes());
                         System.out.println(moduleID + ": Sending successful");
                         // channel.close();
@@ -103,9 +110,8 @@ public class GossipReceiverModule extends Module implements MessageHandler {
     @Override
     public Message handleMessage(GossipTransactionInitMessage msg) {
         // Create connection with other agent, and send request for relevant local ZMI
-
-        // T2A timestamp (GTP)
-        Long msgRecvTs = System.currentTimeMillis();
+        long tra = System.currentTimeMillis();
+        long tsa = msg.getTsa();
 
         System.out.println(moduleID + ": GossipTransaction " + msg.gossipLevel + " [" + msg.getSenderHostname() + "]");
 
@@ -132,6 +138,8 @@ public class GossipReceiverModule extends Module implements MessageHandler {
 
         this.hostnameToRabbitMqConnection.put(sender, connection);
         this.hostnameToTransaction.put(sender, new GossipTransaction(sender, gossipLevel));
+        this.hostnameToTransaction.get(sender).tra = tra;
+        this.hostnameToTransaction.get(sender).tsa = tsa;
         this.gossipLevelToHostnames.computeIfAbsent(gossipLevel, k -> new HashSet<>()).add(sender);
 
         Message ret = new GetZMIGossipInfoRequestMessage(gossipLevel);
