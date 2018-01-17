@@ -23,7 +23,7 @@ public class ZMIHolderModule extends Module implements MessageHandler {
     public static final String moduleID = "ZMIHolder";
     private final long QUERY_EVAL_FREQ = 5000;
     private final long ZMI_TIMEOUT = 40000L;
-    private final boolean USE_GTP = false;
+    private final boolean USE_GTP = true;
 
     private ZMI root;
     private ZMI self;
