@@ -35,6 +35,10 @@ public class GossipTransactionRemoteZMIMessage extends SerializedMessage impleme
         tra = System.currentTimeMillis();
     }
 
+    public void setTra(long tra) {
+        this.tra = tra;
+    }
+
     public long getTra() {
         return this.tra;
     }

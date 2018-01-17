@@ -91,6 +91,7 @@ public class GossipReceiverModule extends Module implements MessageHandler {
                                 .contentType(Module.SERIALIZED_TYPE)
                                 .build();
 
+                        msgRemote.setTra(transaction.tra);
                         msgRemote.setTrb();
                         transaction.trb = msgRemote.getTrb();
 
