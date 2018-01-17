@@ -22,7 +22,7 @@ public class ZMIHolderModule extends Module implements MessageHandler {
 
     public static final String moduleID = "ZMIHolder";
     private final long QUERY_EVAL_FREQ = 5000;
-    private final long ZMI_TIMEOUT = 20000L;
+    private final long ZMI_TIMEOUT = 40000L;
 
     private ZMI root;
     private ZMI self;
@@ -181,6 +181,8 @@ public class ZMIHolderModule extends Module implements MessageHandler {
         for (Map.Entry<String, ZMI> e : pathToZmi.entrySet()) {
             if (!rootSelfPathZmis.contains(e.getValue())
                     && currentTime - e.getValue().getTimestamp() > ZMI_TIMEOUT) {
+                System.out.println(moduleID + ": will delete " + e.getKey());
+                System.out.println(moduleID + ": timestamps " + currentTime + " " + e.getValue().getTimestamp());
                 pathsToDelete.add(e.getKey());
                 zmisToDelete.add(e.getValue());
             }
