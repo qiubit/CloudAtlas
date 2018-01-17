@@ -37,10 +37,10 @@ class ContactsChangeForm extends Component {
         contactExists = true;
       }
     });
-    if (!contactExists) {
+    //if (!contactExists) {
       newContacts.push(newContact);
       this.setState({ newContacts: newContacts });
-    }
+    //}
   }
 
   onContactsSubmit() {
